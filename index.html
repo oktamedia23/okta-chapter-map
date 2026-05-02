@@ -1040,13 +1040,13 @@ function renderRegionView() {
     const view = DATA.regionViews[r];
     const lat = view ? view.lat : DATA.regionSummary[r].lat;
     const lng = view ? view.lng : DATA.regionSummary[r].lng;
-    // 권역별 회원수에 따라 사이즈 (sqrt 매핑, 60 ~ 160px)
-    // 기준: 1600명 = 160px, 130명 = 60px
+    // 권역별 회원수에 따라 사이즈 (sqrt 매핑, 90 ~ 160px)
+    // 최소 사이즈 90px - 글자가 잘리지 않을 정도
     const sqMin = Math.sqrt(130);   // 최소 회원수 가정
     const sqMax = Math.sqrt(1700);  // 최대 회원수 가정
     const sqCur = Math.sqrt(Math.max(memberCount, 1));
     const ratio = Math.max(0, Math.min(1, (sqCur - sqMin) / (sqMax - sqMin)));
-    const size = Math.round(60 + ratio * 100);  // 60 ~ 160px
+    const size = Math.round(90 + ratio * 70);  // 90 ~ 160px
     const color = RC[r] || '#d62828';
     const chapterLabel = currentLang === 'ko' ? `${chapterCount}개 지회` 
       : currentLang === 'zh' ? `${chapterCount}个分会`
