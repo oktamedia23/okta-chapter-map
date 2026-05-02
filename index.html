@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" id="htmlRoot">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -348,7 +348,24 @@
             box-shadow: 4px 0 16px rgba(0,0,0,.15); transition: left 0.25s; }
     aside.open { left: 0; }
     .header-stats .stat-pill:nth-child(n+3) { display: none; }
-    .menu-btn { display: block !important; }
+    .lang-switcher {
+    display: flex; gap: 4px; margin-right: 12px; align-items: center;
+  }
+  .lang-btn {
+    padding: 4px 10px; font-size: 11px; font-weight: 600;
+    border: 1px solid var(--gray-200); background: white;
+    color: var(--gray-700); border-radius: 6px; cursor: pointer;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .lang-btn:hover { background: var(--gray-50); }
+  .lang-btn.active { background: var(--red); color: white; border-color: var(--red); }
+  
+  @media (max-width: 768px) {
+    .lang-switcher { gap: 2px; margin-right: 6px; }
+    .lang-btn { padding: 3px 6px; font-size: 9px; }
+  }
+  
+  .menu-btn { display: block !important; }
     .legend { left: 12px; bottom: 12px; max-width: 180px; font-size: 10px; }
     .legend-body { max-height: 50vh; }
     .title-block h1 { font-size: 13px; }
@@ -382,6 +399,12 @@
         <span class="credit">Created by <strong>옥타미디어운영위원회</strong> v20260502</span>
       </div>
     </div>
+  </div>
+  <div class="lang-switcher">
+    <button class="lang-btn" data-lang="ko" onclick="setLang('ko')">한국어</button>
+    <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" data-lang="zh" onclick="setLang('zh')">中文</button>
+    <button class="lang-btn" data-lang="ja" onclick="setLang('ja')">日本語</button>
   </div>
   <div class="header-stats">
     <div class="stat-pill"><span class="num" id="statMembers">-</span><span class="lbl">DB등록회원</span></div>
@@ -686,6 +709,103 @@ async function loadDataFromSheet() {
 // === 이하 렌더링 코드 (이전과 동일) ===
 // ============================================================
 let DATA = STATIC_DATA_PRELOADED;  // 정적 모드: 즉시 초기화
+
+// ============================================================
+// 다국어(i18n) 시스템
+// ============================================================
+const I18N = {"countries": {"USA": {"ko": "미국", "en": "USA", "zh": "美国", "ja": "アメリカ"}, "Canada": {"ko": "캐나다", "en": "Canada", "zh": "加拿大", "ja": "カナダ"}, "Mexico": {"ko": "멕시코", "en": "Mexico", "zh": "墨西哥", "ja": "メキシコ"}, "Argentina": {"ko": "아르헨티나", "en": "Argentina", "zh": "阿根廷", "ja": "アルゼンチン"}, "Brazil": {"ko": "브라질", "en": "Brazil", "zh": "巴西", "ja": "ブラジル"}, "Chile": {"ko": "칠레", "en": "Chile", "zh": "智利", "ja": "チリ"}, "Colombia": {"ko": "콜롬비아", "en": "Colombia", "zh": "哥伦比亚", "ja": "コロンビア"}, "Ecuador": {"ko": "에콰도르", "en": "Ecuador", "zh": "厄瓜多尔", "ja": "エクアドル"}, "Panama": {"ko": "파나마", "en": "Panama", "zh": "巴拿马", "ja": "パナマ"}, "Paraguay": {"ko": "파라과이", "en": "Paraguay", "zh": "巴拉圭", "ja": "パラグアイ"}, "Peru": {"ko": "페루", "en": "Peru", "zh": "秘鲁", "ja": "ペルー"}, "Uruguay": {"ko": "우루과이", "en": "Uruguay", "zh": "乌拉圭", "ja": "ウルグアイ"}, "Venezuela": {"ko": "베네수엘라", "en": "Venezuela", "zh": "委内瑞拉", "ja": "ベネズエラ"}, "Dominican Republic": {"ko": "도미니카공화국", "en": "Dominican Republic", "zh": "多米尼加", "ja": "ドミニカ共和国"}, "Costa Rica": {"ko": "코스타리카", "en": "Costa Rica", "zh": "哥斯达黎加", "ja": "コスタリカ"}, "Australia": {"ko": "호주", "en": "Australia", "zh": "澳大利亚", "ja": "オーストラリア"}, "New Zealand": {"ko": "뉴질랜드", "en": "New Zealand", "zh": "新西兰", "ja": "ニュージーランド"}, "China": {"ko": "중국", "en": "China", "zh": "中国", "ja": "中国"}, "Japan": {"ko": "일본", "en": "Japan", "zh": "日本", "ja": "日本"}, "Korea": {"ko": "한국", "en": "Korea", "zh": "韩国", "ja": "韓国"}, "Hong Kong": {"ko": "홍콩", "en": "Hong Kong", "zh": "香港", "ja": "香港"}, "Taiwan": {"ko": "대만", "en": "Taiwan", "zh": "台湾", "ja": "台湾"}, "Singapore": {"ko": "싱가포르", "en": "Singapore", "zh": "新加坡", "ja": "シンガポール"}, "Malaysia": {"ko": "말레이시아", "en": "Malaysia", "zh": "马来西亚", "ja": "マレーシア"}, "Indonesia": {"ko": "인도네시아", "en": "Indonesia", "zh": "印度尼西亚", "ja": "インドネシア"}, "Philippines": {"ko": "필리핀", "en": "Philippines", "zh": "菲律宾", "ja": "フィリピン"}, "Thailand": {"ko": "태국", "en": "Thailand", "zh": "泰国", "ja": "タイ"}, "Vietnam": {"ko": "베트남", "en": "Vietnam", "zh": "越南", "ja": "ベトナム"}, "Cambodia": {"ko": "캄보디아", "en": "Cambodia", "zh": "柬埔寨", "ja": "カンボジア"}, "Laos": {"ko": "라오스", "en": "Laos", "zh": "老挝", "ja": "ラオス"}, "Myanmar": {"ko": "미얀마", "en": "Myanmar", "zh": "缅甸", "ja": "ミャンマー"}, "India": {"ko": "인도", "en": "India", "zh": "印度", "ja": "インド"}, "Bangladesh": {"ko": "방글라데시", "en": "Bangladesh", "zh": "孟加拉国", "ja": "バングラデシュ"}, "Nepal": {"ko": "네팔", "en": "Nepal", "zh": "尼泊尔", "ja": "ネパール"}, "Sri Lanka": {"ko": "스리랑카", "en": "Sri Lanka", "zh": "斯里兰卡", "ja": "スリランカ"}, "Mongolia": {"ko": "몽골", "en": "Mongolia", "zh": "蒙古", "ja": "モンゴル"}, "Austria": {"ko": "오스트리아", "en": "Austria", "zh": "奥地利", "ja": "オーストリア"}, "Belgium": {"ko": "벨기에", "en": "Belgium", "zh": "比利时", "ja": "ベルギー"}, "Bulgaria": {"ko": "불가리아", "en": "Bulgaria", "zh": "保加利亚", "ja": "ブルガリア"}, "Czech Republic": {"ko": "체코", "en": "Czech Republic", "zh": "捷克", "ja": "チェコ"}, "Denmark": {"ko": "덴마크", "en": "Denmark", "zh": "丹麦", "ja": "デンマーク"}, "Finland": {"ko": "핀란드", "en": "Finland", "zh": "芬兰", "ja": "フィンランド"}, "France": {"ko": "프랑스", "en": "France", "zh": "法国", "ja": "フランス"}, "Germany": {"ko": "독일", "en": "Germany", "zh": "德国", "ja": "ドイツ"}, "Hungary": {"ko": "헝가리", "en": "Hungary", "zh": "匈牙利", "ja": "ハンガリー"}, "Italy": {"ko": "이탈리아", "en": "Italy", "zh": "意大利", "ja": "イタリア"}, "Netherlands": {"ko": "네덜란드", "en": "Netherlands", "zh": "荷兰", "ja": "オランダ"}, "Norway": {"ko": "노르웨이", "en": "Norway", "zh": "挪威", "ja": "ノルウェー"}, "Poland": {"ko": "폴란드", "en": "Poland", "zh": "波兰", "ja": "ポーランド"}, "Romania": {"ko": "루마니아", "en": "Romania", "zh": "罗马尼亚", "ja": "ルーマニア"}, "Russia": {"ko": "러시아", "en": "Russia", "zh": "俄罗斯", "ja": "ロシア"}, "Slovakia": {"ko": "슬로바키아", "en": "Slovakia", "zh": "斯洛伐克", "ja": "スロバキア"}, "Spain": {"ko": "스페인", "en": "Spain", "zh": "西班牙", "ja": "スペイン"}, "Sweden": {"ko": "스웨덴", "en": "Sweden", "zh": "瑞典", "ja": "スウェーデン"}, "Switzerland": {"ko": "스위스", "en": "Switzerland", "zh": "瑞士", "ja": "スイス"}, "UK": {"ko": "영국", "en": "UK", "zh": "英国", "ja": "イギリス"}, "Ukraine": {"ko": "우크라이나", "en": "Ukraine", "zh": "乌克兰", "ja": "ウクライナ"}, "Turkiye": {"ko": "튀르키예", "en": "Turkiye", "zh": "土耳其", "ja": "トルコ"}, "Albania": {"ko": "알바니아", "en": "Albania", "zh": "阿尔巴尼亚", "ja": "アルバニア"}, "Kazakhstan": {"ko": "카자흐스탄", "en": "Kazakhstan", "zh": "哈萨克斯坦", "ja": "カザフスタン"}, "Kyrgyzstan": {"ko": "키르기스스탄", "en": "Kyrgyzstan", "zh": "吉尔吉斯斯坦", "ja": "キルギス"}, "Tajikistan": {"ko": "타지키스탄", "en": "Tajikistan", "zh": "塔吉克斯坦", "ja": "タジキスタン"}, "Uzbekistan": {"ko": "우즈베키스탄", "en": "Uzbekistan", "zh": "乌兹别克斯坦", "ja": "ウズベキスタン"}, "Georgia": {"ko": "조지아", "en": "Georgia", "zh": "格鲁吉亚", "ja": "ジョージア"}, "United Arab Emirates": {"ko": "UAE", "en": "UAE", "zh": "阿联酋", "ja": "UAE"}, "Bahrain": {"ko": "바레인", "en": "Bahrain", "zh": "巴林", "ja": "バーレーン"}, "Egypt": {"ko": "이집트", "en": "Egypt", "zh": "埃及", "ja": "エジプト"}, "Iran": {"ko": "이란", "en": "Iran", "zh": "伊朗", "ja": "イラン"}, "Kuwait": {"ko": "쿠웨이트", "en": "Kuwait", "zh": "科威特", "ja": "クウェート"}, "Oman": {"ko": "오만", "en": "Oman", "zh": "阿曼", "ja": "オマーン"}, "Saudi Arabia": {"ko": "사우디아라비아", "en": "Saudi Arabia", "zh": "沙特阿拉伯", "ja": "サウジアラビア"}, "Algeria": {"ko": "알제리", "en": "Algeria", "zh": "阿尔及利亚", "ja": "アルジェリア"}, "Botswana": {"ko": "보츠와나", "en": "Botswana", "zh": "博茨瓦纳", "ja": "ボツワナ"}, "Ghana": {"ko": "가나", "en": "Ghana", "zh": "加纳", "ja": "ガーナ"}, "Kenya": {"ko": "케냐", "en": "Kenya", "zh": "肯尼亚", "ja": "ケニア"}, "Madagascar": {"ko": "마다가스카르", "en": "Madagascar", "zh": "马达加斯加", "ja": "マダガスカル"}, "Malawi": {"ko": "말라위", "en": "Malawi", "zh": "马拉维", "ja": "マラウイ"}, "Morocco": {"ko": "모로코", "en": "Morocco", "zh": "摩洛哥", "ja": "モロッコ"}, "Nigeria": {"ko": "나이지리아", "en": "Nigeria", "zh": "尼日利亚", "ja": "ナイジェリア"}, "South Africa": {"ko": "남아공", "en": "South Africa", "zh": "南非", "ja": "南アフリカ"}, "Tanzania": {"ko": "탄자니아", "en": "Tanzania", "zh": "坦桑尼亚", "ja": "タンザニア"}}, "cities": {"Los Angeles": {"ko": "로스앤젤레스", "en": "Los Angeles", "zh": "洛杉矶", "ja": "ロサンゼルス"}, "New York": {"ko": "뉴욕", "en": "New York", "zh": "纽约", "ja": "ニューヨーク"}, "San Francisco": {"ko": "샌프란시스코", "en": "San Francisco", "zh": "旧金山", "ja": "サンフランシスコ"}, "Seattle": {"ko": "시애틀", "en": "Seattle", "zh": "西雅图", "ja": "シアトル"}, "San Diego": {"ko": "샌디에이고", "en": "San Diego", "zh": "圣地亚哥", "ja": "サンディエゴ"}, "Las Vegas": {"ko": "라스베가스", "en": "Las Vegas", "zh": "拉斯维加斯", "ja": "ラスベガス"}, "Denver": {"ko": "덴버", "en": "Denver", "zh": "丹佛", "ja": "デンバー"}, "Chicago": {"ko": "시카고", "en": "Chicago", "zh": "芝加哥", "ja": "シカゴ"}, "Boston": {"ko": "보스턴", "en": "Boston", "zh": "波士顿", "ja": "ボストン"}, "Atlanta": {"ko": "애틀랜타", "en": "Atlanta", "zh": "亚特兰大", "ja": "アトランタ"}, "Dallas": {"ko": "댈러스", "en": "Dallas", "zh": "达拉斯", "ja": "ダラス"}, "Houston": {"ko": "휴스턴", "en": "Houston", "zh": "休斯顿", "ja": "ヒューストン"}, "Detroit": {"ko": "디트로이트", "en": "Detroit", "zh": "底特律", "ja": "デトロイト"}, "Miami": {"ko": "마이애미", "en": "Miami", "zh": "迈阿密", "ja": "マイアミ"}, "New Jersey": {"ko": "뉴저지", "en": "New Jersey", "zh": "新泽西", "ja": "ニュージャージー"}, "Washington D.C.": {"ko": "워싱턴 D.C.", "en": "Washington D.C.", "zh": "华盛顿", "ja": "ワシントンD.C."}, "Fort Lee": {"ko": "포트리", "en": "Fort Lee", "zh": "李堡", "ja": "フォートリー"}, "Guam": {"ko": "괌", "en": "Guam", "zh": "关岛", "ja": "グアム"}, "Savannah": {"ko": "서배너", "en": "Savannah", "zh": "萨凡纳", "ja": "サバンナ"}, "San Juan": {"ko": "산후안", "en": "San Juan", "zh": "圣胡安", "ja": "サンファン"}, "Tampa": {"ko": "탬파", "en": "Tampa", "zh": "坦帕", "ja": "タンパ"}, "Raleigh": {"ko": "롤리", "en": "Raleigh", "zh": "罗利", "ja": "ローリー"}, "Toronto": {"ko": "토론토", "en": "Toronto", "zh": "多伦多", "ja": "トロント"}, "Vancouver": {"ko": "밴쿠버", "en": "Vancouver", "zh": "温哥华", "ja": "バンクーバー"}, "Montreal": {"ko": "몬트리올", "en": "Montreal", "zh": "蒙特利尔", "ja": "モントリオール"}, "Calgary": {"ko": "캘거리", "en": "Calgary", "zh": "卡尔加里", "ja": "カルガリー"}, "Edmonton": {"ko": "에드먼턴", "en": "Edmonton", "zh": "埃德蒙顿", "ja": "エドモントン"}, "Windsor": {"ko": "윈저", "en": "Windsor", "zh": "温莎", "ja": "ウィンザー"}, "Beijing": {"ko": "베이징", "en": "Beijing", "zh": "北京", "ja": "北京"}, "Shanghai": {"ko": "상하이", "en": "Shanghai", "zh": "上海", "ja": "上海"}, "Guangzhou": {"ko": "광저우", "en": "Guangzhou", "zh": "广州", "ja": "広州"}, "Shenzhen": {"ko": "선전", "en": "Shenzhen", "zh": "深圳", "ja": "深圳"}, "Tianjin": {"ko": "톈진", "en": "Tianjin", "zh": "天津", "ja": "天津"}, "Qingdao": {"ko": "칭다오", "en": "Qingdao", "zh": "青岛", "ja": "青島"}, "Dalian": {"ko": "다롄", "en": "Dalian", "zh": "大连", "ja": "大連"}, "Shenyang": {"ko": "선양", "en": "Shenyang", "zh": "沈阳", "ja": "瀋陽"}, "Harbin": {"ko": "하얼빈", "en": "Harbin", "zh": "哈尔滨", "ja": "ハルビン"}, "Changchun": {"ko": "창춘", "en": "Changchun", "zh": "长春", "ja": "長春"}, "Yanji": {"ko": "옌지", "en": "Yanji", "zh": "延吉", "ja": "延吉"}, "Yiwu": {"ko": "이우", "en": "Yiwu", "zh": "义乌", "ja": "義烏"}, "Suzhou": {"ko": "쑤저우", "en": "Suzhou", "zh": "苏州", "ja": "蘇州"}, "Hangzhou": {"ko": "항저우", "en": "Hangzhou", "zh": "杭州", "ja": "杭州"}, "Nanjing": {"ko": "난징", "en": "Nanjing", "zh": "南京", "ja": "南京"}, "Chengdu": {"ko": "청두", "en": "Chengdu", "zh": "成都", "ja": "成都"}, "Kunming": {"ko": "쿤밍", "en": "Kunming", "zh": "昆明", "ja": "昆明"}, "Xi'an": {"ko": "시안", "en": "Xi'an", "zh": "西安", "ja": "西安"}, "Yantai": {"ko": "옌타이", "en": "Yantai", "zh": "烟台", "ja": "煙台"}, "Weihai": {"ko": "웨이하이", "en": "Weihai", "zh": "威海", "ja": "威海"}, "Haikou": {"ko": "하이커우", "en": "Haikou", "zh": "海口", "ja": "海口"}, "Jilin": {"ko": "지린", "en": "Jilin", "zh": "吉林", "ja": "吉林"}, "Dandong": {"ko": "단둥", "en": "Dandong", "zh": "丹东", "ja": "丹東"}, "Fushun": {"ko": "푸순", "en": "Fushun", "zh": "抚顺", "ja": "撫順"}, "Sanhe": {"ko": "싼허", "en": "Sanhe", "zh": "三河", "ja": "三河"}, "Hulunbuir": {"ko": "후룬베이얼", "en": "Hulunbuir", "zh": "呼伦贝尔", "ja": "フルンボイル"}, "Zhangjiajie": {"ko": "장자제", "en": "Zhangjiajie", "zh": "张家界", "ja": "張家界"}, "Tonghua": {"ko": "퉁화", "en": "Tonghua", "zh": "通化", "ja": "通化"}, "Chongqing": {"ko": "충칭", "en": "Chongqing", "zh": "重庆", "ja": "重慶"}, "Changsha": {"ko": "창사", "en": "Changsha", "zh": "长沙", "ja": "長沙"}, "Tokyo": {"ko": "도쿄", "en": "Tokyo", "zh": "东京", "ja": "東京"}, "Osaka": {"ko": "오사카", "en": "Osaka", "zh": "大阪", "ja": "大阪"}, "Yokohama": {"ko": "요코하마", "en": "Yokohama", "zh": "横滨", "ja": "横浜"}, "Nagoya": {"ko": "나고야", "en": "Nagoya", "zh": "名古屋", "ja": "名古屋"}, "Sapporo": {"ko": "삿포로", "en": "Sapporo", "zh": "札幌", "ja": "札幌"}, "Fukuoka": {"ko": "후쿠오카", "en": "Fukuoka", "zh": "福冈", "ja": "福岡"}, "Hiroshima": {"ko": "히로시마", "en": "Hiroshima", "zh": "广岛", "ja": "広島"}, "Kumamoto": {"ko": "구마모토", "en": "Kumamoto", "zh": "熊本", "ja": "熊本"}, "Chiba": {"ko": "치바", "en": "Chiba", "zh": "千叶", "ja": "千葉"}, "Saitama": {"ko": "사이타마", "en": "Saitama", "zh": "埼玉", "ja": "埼玉"}, "Seoul": {"ko": "서울", "en": "Seoul", "zh": "首尔", "ja": "ソウル"}, "Hong Kong/Macau": {"ko": "홍콩/마카오", "en": "Hong Kong/Macau", "zh": "香港/澳门", "ja": "香港/マカオ"}, "Taipei": {"ko": "타이페이", "en": "Taipei", "zh": "台北", "ja": "台北"}, "Singapore": {"ko": "싱가포르", "en": "Singapore", "zh": "新加坡", "ja": "シンガポール"}, "Kuala Lumpur": {"ko": "쿠알라룸푸르", "en": "Kuala Lumpur", "zh": "吉隆坡", "ja": "クアラルンプール"}, "Jakarta": {"ko": "자카르타", "en": "Jakarta", "zh": "雅加达", "ja": "ジャカルタ"}, "Manila": {"ko": "마닐라", "en": "Manila", "zh": "马尼拉", "ja": "マニラ"}, "Bangkok": {"ko": "방콕", "en": "Bangkok", "zh": "曼谷", "ja": "バンコク"}, "Hanoi": {"ko": "하노이", "en": "Hanoi", "zh": "河内", "ja": "ハノイ"}, "Ho Chi Minh": {"ko": "호치민", "en": "Ho Chi Minh", "zh": "胡志明市", "ja": "ホーチミン"}, "Phnom Penh": {"ko": "프놈펜", "en": "Phnom Penh", "zh": "金边", "ja": "プノンペン"}, "Vientiane": {"ko": "비엔티안", "en": "Vientiane", "zh": "万象", "ja": "ビエンチャン"}, "Yangon": {"ko": "양곤", "en": "Yangon", "zh": "仰光", "ja": "ヤンゴン"}, "New Delhi": {"ko": "뉴델리", "en": "New Delhi", "zh": "新德里", "ja": "ニューデリー"}, "Mumbai": {"ko": "뭄바이", "en": "Mumbai", "zh": "孟买", "ja": "ムンバイ"}, "Bengaluru": {"ko": "벵갈루루", "en": "Bengaluru", "zh": "班加罗尔", "ja": "バンガロール"}, "Dhaka": {"ko": "다카", "en": "Dhaka", "zh": "达卡", "ja": "ダッカ"}, "Kathmandu": {"ko": "카트만두", "en": "Kathmandu", "zh": "加德满都", "ja": "カトマンズ"}, "Colombo": {"ko": "콜롬보", "en": "Colombo", "zh": "科伦坡", "ja": "コロンボ"}, "Ulaanbaatar": {"ko": "울란바토르", "en": "Ulaanbaatar", "zh": "乌兰巴托", "ja": "ウランバートル"}, "Sydney": {"ko": "시드니", "en": "Sydney", "zh": "悉尼", "ja": "シドニー"}, "Melbourne": {"ko": "멜버른", "en": "Melbourne", "zh": "墨尔本", "ja": "メルボルン"}, "Brisbane": {"ko": "브리즈번", "en": "Brisbane", "zh": "布里斯班", "ja": "ブリスベン"}, "Perth": {"ko": "퍼스", "en": "Perth", "zh": "珀斯", "ja": "パース"}, "Adelaide": {"ko": "애들레이드", "en": "Adelaide", "zh": "阿德莱德", "ja": "アデレード"}, "Canberra": {"ko": "캔버라", "en": "Canberra", "zh": "堪培拉", "ja": "キャンベラ"}, "Tasmania": {"ko": "태즈메이니아", "en": "Tasmania", "zh": "塔斯马尼亚", "ja": "タスマニア"}, "Auckland": {"ko": "오클랜드", "en": "Auckland", "zh": "奥克兰", "ja": "オークランド"}, "Christchurch": {"ko": "크라이스트처치", "en": "Christchurch", "zh": "基督城", "ja": "クライストチャーチ"}, "London": {"ko": "런던", "en": "London", "zh": "伦敦", "ja": "ロンドン"}, "Paris": {"ko": "파리", "en": "Paris", "zh": "巴黎", "ja": "パリ"}, "Berlin": {"ko": "베를린", "en": "Berlin", "zh": "柏林", "ja": "ベルリン"}, "Frankfurt": {"ko": "프랑크푸르트", "en": "Frankfurt", "zh": "法兰克福", "ja": "フランクフルト"}, "Munich": {"ko": "뮌헨", "en": "Munich", "zh": "慕尼黑", "ja": "ミュンヘン"}, "Dusseldorf": {"ko": "뒤셀도르프", "en": "Dusseldorf", "zh": "杜塞尔多夫", "ja": "デュッセルドルフ"}, "Madrid": {"ko": "마드리드", "en": "Madrid", "zh": "马德里", "ja": "マドリード"}, "Barcelona": {"ko": "바르셀로나", "en": "Barcelona", "zh": "巴塞罗那", "ja": "バルセロナ"}, "Milano": {"ko": "밀라노", "en": "Milano", "zh": "米兰", "ja": "ミラノ"}, "Wien": {"ko": "비엔나", "en": "Vienna", "zh": "维也纳", "ja": "ウィーン"}, "Brussels": {"ko": "브뤼셀", "en": "Brussels", "zh": "布鲁塞尔", "ja": "ブリュッセル"}, "Amsterdam": {"ko": "암스테르담", "en": "Amsterdam", "zh": "阿姆斯特丹", "ja": "アムステルダム"}, "Copenhagen": {"ko": "코펜하겐", "en": "Copenhagen", "zh": "哥本哈根", "ja": "コペンハーゲン"}, "Helsinki": {"ko": "헬싱키", "en": "Helsinki", "zh": "赫尔辛基", "ja": "ヘルシンキ"}, "Oslo": {"ko": "오슬로", "en": "Oslo", "zh": "奥斯陆", "ja": "オスロ"}, "Stockholm": {"ko": "스톡홀름", "en": "Stockholm", "zh": "斯德哥尔摩", "ja": "ストックホルム"}, "Zurich": {"ko": "취리히", "en": "Zurich", "zh": "苏黎世", "ja": "チューリッヒ"}, "Warsaw": {"ko": "바르샤바", "en": "Warsaw", "zh": "华沙", "ja": "ワルシャワ"}, "Prague": {"ko": "프라하", "en": "Prague", "zh": "布拉格", "ja": "プラハ"}, "Budapest": {"ko": "부다페스트", "en": "Budapest", "zh": "布达佩斯", "ja": "ブダペスト"}, "Bratislava": {"ko": "브라티슬라바", "en": "Bratislava", "zh": "布拉迪斯拉发", "ja": "ブラチスラバ"}, "Sofia": {"ko": "소피아", "en": "Sofia", "zh": "索菲亚", "ja": "ソフィア"}, "Bucharest": {"ko": "부쿠레슈티", "en": "Bucharest", "zh": "布加勒斯特", "ja": "ブカレスト"}, "Tirana": {"ko": "티라나", "en": "Tirana", "zh": "地拉那", "ja": "ティラナ"}, "Moscow": {"ko": "모스크바", "en": "Moscow", "zh": "莫斯科", "ja": "モスクワ"}, "Saint Petersburg": {"ko": "상트페테르부르크", "en": "Saint Petersburg", "zh": "圣彼得堡", "ja": "サンクトペテルブルク"}, "Vladivostok": {"ko": "블라디보스토크", "en": "Vladivostok", "zh": "符拉迪沃斯托克", "ja": "ウラジオストク"}, "Kyiv": {"ko": "키이우", "en": "Kyiv", "zh": "基辅", "ja": "キーウ"}, "Istanbul": {"ko": "이스탄불", "en": "Istanbul", "zh": "伊斯坦布尔", "ja": "イスタンブール"}, "Almaty": {"ko": "알마티", "en": "Almaty", "zh": "阿拉木图", "ja": "アルマトイ"}, "Bishkek": {"ko": "비슈케크", "en": "Bishkek", "zh": "比什凯克", "ja": "ビシュケク"}, "Tashkent": {"ko": "타슈켄트", "en": "Tashkent", "zh": "塔什干", "ja": "タシケント"}, "Dushanbe": {"ko": "두샨베", "en": "Dushanbe", "zh": "杜尚别", "ja": "ドゥシャンベ"}, "Tbilisi": {"ko": "트빌리시", "en": "Tbilisi", "zh": "第比利斯", "ja": "トビリシ"}, "Dubai": {"ko": "두바이", "en": "Dubai", "zh": "迪拜", "ja": "ドバイ"}, "Abu Dhabi": {"ko": "아부다비", "en": "Abu Dhabi", "zh": "阿布扎比", "ja": "アブダビ"}, "Bahrain": {"ko": "바레인", "en": "Bahrain", "zh": "巴林", "ja": "バーレーン"}, "Cairo": {"ko": "카이로", "en": "Cairo", "zh": "开罗", "ja": "カイロ"}, "Teheran": {"ko": "테헤란", "en": "Tehran", "zh": "德黑兰", "ja": "テヘラン"}, "Kuwait": {"ko": "쿠웨이트", "en": "Kuwait", "zh": "科威特", "ja": "クウェート"}, "Muscat": {"ko": "무스카트", "en": "Muscat", "zh": "马斯喀特", "ja": "マスカット"}, "Riyadh": {"ko": "리야드", "en": "Riyadh", "zh": "利雅得", "ja": "リヤド"}, "Jeddah": {"ko": "제다", "en": "Jeddah", "zh": "吉达", "ja": "ジッダ"}, "Algiers": {"ko": "알제", "en": "Algiers", "zh": "阿尔及尔", "ja": "アルジェ"}, "Gaborone": {"ko": "가보로네", "en": "Gaborone", "zh": "哈博罗内", "ja": "ハボローネ"}, "Accra": {"ko": "아크라", "en": "Accra", "zh": "阿克拉", "ja": "アクラ"}, "Nairobi": {"ko": "나이로비", "en": "Nairobi", "zh": "内罗毕", "ja": "ナイロビ"}, "Antananarivo": {"ko": "안타나나리보", "en": "Antananarivo", "zh": "塔那那利佛", "ja": "アンタナナリボ"}, "Lilongwe": {"ko": "릴롱궤", "en": "Lilongwe", "zh": "利隆圭", "ja": "リロングウェ"}, "Casablanca": {"ko": "카사블랑카", "en": "Casablanca", "zh": "卡萨布兰卡", "ja": "カサブランカ"}, "Lagos": {"ko": "라고스", "en": "Lagos", "zh": "拉各斯", "ja": "ラゴス"}, "Cape Town": {"ko": "케이프타운", "en": "Cape Town", "zh": "开普敦", "ja": "ケープタウン"}, "Johannesburg": {"ko": "요하네스버그", "en": "Johannesburg", "zh": "约翰内斯堡", "ja": "ヨハネスブルグ"}, "Dar es Salaam": {"ko": "다르에스살람", "en": "Dar es Salaam", "zh": "达累斯萨拉姆", "ja": "ダルエスサラーム"}, "Mexico City": {"ko": "멕시코시티", "en": "Mexico City", "zh": "墨西哥城", "ja": "メキシコシティ"}, "Monterrey": {"ko": "몬테레이", "en": "Monterrey", "zh": "蒙特雷", "ja": "モンテレイ"}, "Buenos Aires": {"ko": "부에노스아이레스", "en": "Buenos Aires", "zh": "布宜诺斯艾利斯", "ja": "ブエノスアイレス"}, "Sao Paulo": {"ko": "상파울루", "en": "Sao Paulo", "zh": "圣保罗", "ja": "サンパウロ"}, "Santiago": {"ko": "산티아고", "en": "Santiago", "zh": "圣地亚哥", "ja": "サンティアゴ"}, "Lima": {"ko": "리마", "en": "Lima", "zh": "利马", "ja": "リマ"}, "Bogota": {"ko": "보고타", "en": "Bogota", "zh": "波哥大", "ja": "ボゴタ"}, "Quito": {"ko": "키토", "en": "Quito", "zh": "基多", "ja": "キト"}, "Asuncion": {"ko": "아순시온", "en": "Asuncion", "zh": "亚松森", "ja": "アスンシオン"}, "Ciudad del Este": {"ko": "시우다드델에스테", "en": "Ciudad del Este", "zh": "东方市", "ja": "シウダー・デル・エステ"}, "Panama City": {"ko": "파나마시티", "en": "Panama City", "zh": "巴拿马城", "ja": "パナマシティ"}, "San Jose": {"ko": "산호세", "en": "San Jose", "zh": "圣何塞", "ja": "サンホセ"}, "Santo Domingo": {"ko": "산토도밍고", "en": "Santo Domingo", "zh": "圣多明各", "ja": "サントドミンゴ"}, "Montevideo": {"ko": "몬테비데오", "en": "Montevideo", "zh": "蒙得维的亚", "ja": "モンテビデオ"}}, "regions": {"북미주": {"ko": "북미주", "en": "North America", "zh": "北美洲", "ja": "北米"}, "북미주서부": {"ko": "북미주서부", "en": "North America West", "zh": "北美西部", "ja": "北米西部"}, "북미주동부": {"ko": "북미주동부", "en": "North America East", "zh": "北美东部", "ja": "北米東部"}, "중남미": {"ko": "중남미", "en": "Latin America", "zh": "拉丁美洲", "ja": "中南米"}, "유럽·유라시아": {"ko": "유럽·유라시아", "en": "Europe & Eurasia", "zh": "欧洲·欧亚", "ja": "欧州·ユーラシア"}, "중동·아프리카": {"ko": "중동·아프리카", "en": "Middle East & Africa", "zh": "中东·非洲", "ja": "中東·アフリカ"}, "아시아": {"ko": "아시아", "en": "Asia", "zh": "亚洲", "ja": "アジア"}, "대양주": {"ko": "대양주", "en": "Oceania", "zh": "大洋洲", "ja": "オセアニア"}, "중국": {"ko": "중국", "en": "China", "zh": "中国", "ja": "中国"}, "일본": {"ko": "일본", "en": "Japan", "zh": "日本", "ja": "日本"}}, "categories": {"리빙 & 뷰티": {"ko": "리빙 & 뷰티", "en": "Living & Beauty", "zh": "生活·美妆", "ja": "リビング·ビューティー"}, "식음료, 요식업": {"ko": "식음료, 요식업", "en": "Food & Beverage", "zh": "餐饮", "ja": "飲食"}, "전기, 전자": {"ko": "전기, 전자", "en": "Electronics", "zh": "电气电子", "ja": "電気·電子"}, "화학, 자원": {"ko": "화학, 자원", "en": "Chemicals & Resources", "zh": "化工·资源", "ja": "化学·資源"}, "건축, 재활용": {"ko": "건축, 재활용", "en": "Construction & Recycling", "zh": "建筑·回收", "ja": "建築·リサイクル"}, "호텔, 여행": {"ko": "호텔, 여행", "en": "Hotel & Travel", "zh": "酒店旅游", "ja": "ホテル·旅行"}, "건강식품, 미용용품": {"ko": "건강식품, 미용용품", "en": "Health & Cosmetics", "zh": "健康·美容", "ja": "健康食品·美容"}, "금융, 법률, 부동산": {"ko": "금융, 법률, 부동산", "en": "Finance, Legal, Real Estate", "zh": "金融法律房地产", "ja": "金融·法律·不動産"}, "섬유, 섬유제품": {"ko": "섬유, 섬유제품", "en": "Textiles", "zh": "纺织品", "ja": "繊維"}, "물류": {"ko": "물류", "en": "Logistics", "zh": "物流", "ja": "物流"}, "전자상거래": {"ko": "전자상거래", "en": "E-Commerce", "zh": "电子商务", "ja": "EC"}, "교육, 문화, 리크루팅": {"ko": "교육, 문화, 리크루팅", "en": "Education & Culture", "zh": "教育·文化", "ja": "教育·文化·人材"}, "기계, 공구": {"ko": "기계, 공구", "en": "Machinery & Tools", "zh": "机械·工具", "ja": "機械·工具"}, "4차산업, 컨텐츠, 플랫폼": {"ko": "4차산업, 컨텐츠, 플랫폼", "en": "4th Industry & Tech", "zh": "第四产业", "ja": "第4次産業·コンテンツ"}, "기업회의, 포상관광, 컨벤션, 전시": {"ko": "기업회의, 포상관광, 컨벤션, 전시", "en": "MICE", "zh": "会展·MICE", "ja": "MICE"}, "종합무역": {"ko": "종합무역", "en": "General Trade", "zh": "综合贸易", "ja": "総合貿易"}, "서비스업": {"ko": "서비스업", "en": "Service", "zh": "服务业", "ja": "サービス業"}, "기타": {"ko": "기타", "en": "Others", "zh": "其他", "ja": "その他"}}, "ui": {"title": {"ko": "OKTA DB등록 기준 지회지도", "en": "OKTA Chapter Map (DB-based)", "zh": "OKTA分会地图(DB基准)", "ja": "OKTA支会マップ(DB基準)"}, "subtitle": {"ko": "2026년 5월 2일 okta.net DB 기준", "en": "Based on okta.net DB · May 2, 2026", "zh": "基于okta.net DB · 2026年5月2日", "ja": "okta.net DB基準 · 2026年5月2日"}, "created_by": {"ko": "Created by 옥타미디어운영위원회", "en": "Created by OKTA Media Committee", "zh": "由OKTA媒体运营委员会制作", "ja": "OKTAメディア運営委員会作成"}, "stat_members": {"ko": "DB등록회원", "en": "Members", "zh": "注册会员", "ja": "登録会員"}, "stat_chapters": {"ko": "지회", "en": "Chapters", "zh": "分会", "ja": "支会"}, "stat_countries": {"ko": "활동국가", "en": "Countries", "zh": "国家", "ja": "国"}, "stat_presidents": {"ko": "지회장", "en": "Presidents", "zh": "会长", "ja": "会長"}, "stat_regions": {"ko": "권역", "en": "Regions", "zh": "地区", "ja": "地域"}, "search_placeholder": {"ko": "🔍 회원/회사/지회/도시 검색...", "en": "🔍 Search member/company/chapter...", "zh": "🔍 搜索会员/公司/分会...", "ja": "🔍 会員/会社/支会を検索..."}, "filter_category": {"ko": "업종 카테고리", "en": "Industry Category", "zh": "行业分类", "ja": "業種カテゴリ"}, "filter_status": {"ko": "지회장 상태", "en": "President Status", "zh": "会长状态", "ja": "会長ステータス"}, "all": {"ko": "전체", "en": "All", "zh": "全部", "ja": "全て"}, "has_president": {"ko": "지회장 있음", "en": "Has President", "zh": "有会长", "ja": "会長あり"}, "vacant": {"ko": "지회장 공석", "en": "Vacant", "zh": "会长空缺", "ja": "会長空席"}, "unofficial": {"ko": "공식지회 외", "en": "Unofficial", "zh": "非官方", "ja": "非公式"}, "view_region": {"ko": "권역 뷰", "en": "Region View", "zh": "地区视图", "ja": "地域ビュー"}, "view_chapter": {"ko": "지회 뷰", "en": "Chapter View", "zh": "分会视图", "ja": "支会ビュー"}, "breadcrumb_world": {"ko": "전세계", "en": "World", "zh": "全球", "ja": "世界"}, "breadcrumb_all_chapters": {"ko": "전체 지회", "en": "All Chapters", "zh": "所有分会", "ja": "全支会"}, "legend_title": {"ko": "권역 (DB등록회원)", "en": "Regions (Members)", "zh": "地区(注册会员)", "ja": "地域(登録会員)"}, "loading": {"ko": "지도 데이터 로딩 중...", "en": "Loading map data...", "zh": "加载地图数据...", "ja": "地図データ読み込み中..."}, "preparing": {"ko": "데이터 준비 중...", "en": "Preparing data...", "zh": "准备数据...", "ja": "データ準備中..."}, "count_chapters": {"ko": "개 지회", "en": " chapters", "zh": "个分会", "ja": "支会"}, "count_countries": {"ko": "개 국가", "en": " countries", "zh": "个国家", "ja": "ヶ国"}, "count_members": {"ko": "명", "en": "", "zh": "人", "ja": "名"}, "count_active_countries": {"ko": "개 활동국가", "en": " active countries", "zh": "活动国家", "ja": "活動国"}, "total_members": {"ko": "총 회원", "en": "Total Members", "zh": "总会员", "ja": "総会員"}, "chapter_count": {"ko": "지회 수", "en": "Chapters", "zh": "分会数", "ja": "支会数"}, "active_countries": {"ko": "활동국가", "en": "Active Countries", "zh": "活动国家", "ja": "活動国"}, "presidents_count": {"ko": "지회장", "en": "Presidents", "zh": "会长", "ja": "会長"}, "vacant_count": {"ko": "지회장 공석", "en": "Vacant", "zh": "会长空缺", "ja": "会長空席"}, "vacant_chapters": {"ko": "개 지회", "en": " chapters", "zh": "个分会", "ja": "支会"}, "main_industries": {"ko": "주요 업종", "en": "Main Industries", "zh": "主要行业", "ja": "主要業種"}, "category_distribution": {"ko": "업종 카테고리 분포", "en": "Category Distribution", "zh": "行业分布", "ja": "業種分布"}, "view_chapters_in": {"ko": "→ {region} 지회 보기", "en": "→ View {region} Chapters", "zh": "→ 查看{region}分会", "ja": "→ {region}の支会を見る"}, "view_north_america_chapters": {"ko": "→ 북미주 지회 보기", "en": "→ View North America Chapters", "zh": "→ 查看北美分会", "ja": "→ 北米の支会を見る"}, "president_label": {"ko": "지회장", "en": "President", "zh": "会长", "ja": "会長"}, "unofficial_chapter": {"ko": "공식지회 외", "en": "Unofficial", "zh": "非官方分会", "ja": "非公式"}, "vacant_label": {"ko": "지회장 공석", "en": "President Vacant", "zh": "会长空缺", "ja": "会長空席"}, "db_members_count": {"ko": "DB등록회원", "en": "DB Members", "zh": "注册会员", "ja": "登録会員"}, "members_filtered": {"ko": "명 (필터링됨)", "en": " (filtered)", "zh": "人(已筛选)", "ja": "名(フィルタ済)"}, "recommend": {"ko": "💡 추천", "en": "💡 Recommend", "zh": "💡 推荐", "ja": "💡 推奨"}, "honorary_chair": {"ko": "명예회장", "en": "Honorary Chair", "zh": "名誉会长", "ja": "名誉会長"}, "audit": {"ko": "감사", "en": "Auditor", "zh": "监事", "ja": "監査"}, "go_back_region": {"ko": "← 권역 보기", "en": "← Back to Region", "zh": "← 返回地区", "ja": "← 地域に戻る"}, "regions_count": {"ko": "개 권역", "en": " Regions", "zh": "个地区", "ja": "地域"}}};
+
+// 현재 언어 (localStorage에서 복원, 기본값 ko)
+let currentLang = localStorage.getItem('okta_lang') || 'ko';
+
+function t(key, fallback) {
+  const u = I18N.ui[key];
+  if (u && u[currentLang]) return u[currentLang];
+  return fallback || key;
+}
+
+function tCountry(en) {
+  if (!en) return '';
+  const c = I18N.countries[en];
+  if (c && c[currentLang]) return c[currentLang];
+  return en;
+}
+
+function tCity(en) {
+  if (!en) return '';
+  const c = I18N.cities[en];
+  if (c && c[currentLang]) return c[currentLang];
+  return en;
+}
+
+function tRegion(ko) {
+  if (!ko) return '';
+  const r = I18N.regions[ko];
+  if (r && r[currentLang]) return r[currentLang];
+  return ko;
+}
+
+function tCategory(ko) {
+  if (!ko) return '';
+  const c = I18N.categories[ko];
+  if (c && c[currentLang]) return c[currentLang];
+  return ko;
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('okta_lang', lang);
+  document.documentElement.lang = lang;
+  applyI18nToStaticUI();
+  // 언어 버튼 active 상태 업데이트
+  document.querySelectorAll('.lang-btn').forEach(b => 
+    b.classList.toggle('active', b.dataset.lang === lang));
+  // 다시 렌더
+  if (typeof render === 'function') render();
+}
+
+function applyI18nToStaticUI() {
+  // 정적 UI 요소 다국어 적용
+  const titleEl = document.querySelector('.title-block h1');
+  if (titleEl) {
+    const ver = titleEl.querySelector('.ver-tag');
+    titleEl.innerHTML = t('title') + ' ';
+    if (ver) titleEl.appendChild(ver);
+  }
+  
+  // 통계 라벨
+  const setLabel = (sel, key) => {
+    const el = document.querySelector(sel);
+    if (el) el.textContent = t(key);
+  };
+  
+  // 통계 pill 라벨들
+  document.querySelectorAll('.stat-pill').forEach((p, i) => {
+    const lbl = p.querySelector('.lbl');
+    if (!lbl) return;
+    const keys = ['stat_members', 'stat_chapters', 'stat_countries', 'stat_presidents', 'stat_regions'];
+    if (keys[i]) lbl.textContent = t(keys[i]);
+  });
+  
+  // 검색 placeholder
+  const search = document.getElementById('searchInput');
+  if (search) search.placeholder = t('search_placeholder');
+  
+  // 필터 헤더
+  const filterHeaders = document.querySelectorAll('.filter-header');
+  if (filterHeaders[0]) filterHeaders[0].querySelector('span').textContent = t('filter_category');
+  if (filterHeaders[1]) filterHeaders[1].querySelector('span').textContent = t('filter_status');
+  
+  // 뷰 토글 버튼
+  document.querySelectorAll('.view-toggle button').forEach(btn => {
+    if (btn.dataset.view === 'region') btn.textContent = t('view_region');
+    else if (btn.dataset.view === 'chapter') btn.textContent = t('view_chapter');
+  });
+  
+  // 범례 타이틀
+  const legendTitle = document.querySelector('.legend-title');
+  if (legendTitle) legendTitle.textContent = t('legend_title');
+}
 const RC = DATA.regionColors;
 const state = { view: 'region', selectedRegion: null, search: '', category: null, status: null };
 
@@ -746,8 +866,8 @@ function buildFilters() {
   const cf = document.getElementById('categoryFilter');
   cf.innerHTML = '';
   const allCat = document.createElement('div');
-  allCat.className = 'filter-chip active'; allCat.dataset.value = ''; allCat.textContent = '전체';
-  allCat.onclick = () => { state.category = null; updateChips('category'); render(); };
+  allCat.className = 'filter-chip active'; allCat.dataset.value = ''; allCat.textContent = t('all');
+  allCat.onclick = () => { state.category = null; updateChips('category'); render(); closeSidebarOnMobile(); };
   cf.appendChild(allCat);
   DATA.categories.forEach(cat => {
     const color = DATA.categoryColors[cat] || '#94a3b8';
@@ -756,24 +876,24 @@ function buildFilters() {
     if (cnt === 0) return;
     const chip = document.createElement('div');
     chip.className = 'filter-chip'; chip.dataset.value = cat;
-    chip.innerHTML = `<span class="dot" style="background:${color}"></span>${cat} <span class="cnt">${cnt}</span>`;
-    chip.onclick = () => { state.category = state.category === cat ? null : cat; updateChips('category'); render(); };
+    chip.innerHTML = `<span class="dot" style="background:${color}"></span>${escapeHTML(tCategory(cat))} <span class="cnt">${cnt}</span>`;
+    chip.onclick = () => { state.category = state.category === cat ? null : cat; updateChips('category'); render(); closeSidebarOnMobile(); };
     cf.appendChild(chip);
   });
   
   const sf = document.getElementById('statusFilter');
   sf.innerHTML = '';
   const statuses = [
-    {v: '', label: '전체'},
-    {v: 'has-pres', label: '지회장 있음', cnt: DATA.totalPresidents},
-    {v: 'vacant', label: '지회장 공석', cnt: DATA.totalVacant},
-    {v: 'unofficial', label: '공식지회 외', cnt: DATA.totalChapters - DATA.totalOfficial},
+    {v: '', label: t('all')},
+    {v: 'has-pres', label: t('has_president'), cnt: DATA.totalPresidents},
+    {v: 'vacant', label: t('vacant'), cnt: DATA.totalVacant},
+    {v: 'unofficial', label: t('unofficial'), cnt: DATA.totalChapters - DATA.totalOfficial},
   ];
   statuses.forEach(s => {
     const chip = document.createElement('div');
     chip.className = 'filter-chip' + (s.v === '' ? ' active' : ''); chip.dataset.value = s.v;
     chip.innerHTML = s.label + (s.cnt !== undefined ? ` <span class="cnt">${s.cnt}</span>` : '');
-    chip.onclick = () => { state.status = s.v === '' ? null : (state.status === s.v ? null : s.v); updateChips('status'); render(); };
+    chip.onclick = () => { state.status = s.v === '' ? null : (state.status === s.v ? null : s.v); updateChips('status'); render(); closeSidebarOnMobile(); };
     sf.appendChild(chip);
   });
   
@@ -785,7 +905,7 @@ function buildFilters() {
     if (!summary) return;
     const item = document.createElement('div');
     item.className = 'legend-item';
-    item.innerHTML = `<span class="legend-dot" style="background:${RC[r]}"></span><span>${r} (${summary.totalMembers})</span>`;
+    item.innerHTML = `<span class="legend-dot" style="background:${RC[r]}"></span><span>${tRegion(r)} (${summary.totalMembers})</span>`;
     item.onclick = () => {
       if (r === '북미주') {
         state.view = 'chapter';
@@ -851,9 +971,13 @@ function renderRegionView() {
     const lng = view ? view.lng : DATA.regionSummary[r].lng;
     const size = Math.min(70 + Math.sqrt(memberCount) * 2.5, 130);
     const color = RC[r] || '#d62828';
+    const chapterLabel = currentLang === 'ko' ? `${chapterCount}개 지회` 
+      : currentLang === 'zh' ? `${chapterCount}个分会`
+      : currentLang === 'ja' ? `${chapterCount}支会`
+      : `${chapterCount} ch.`;
     const html = `<div class="map-marker region" style="width:${size}px;height:${size}px;background:${color}">
-      <div class="r-name">${escapeHTML(r)}</div>
-      <div class="r-chap">${chapterCount}개 지회</div>
+      <div class="r-name">${escapeHTML(tRegion(r))}</div>
+      <div class="r-chap">${chapterLabel}</div>
       <div class="r-mem">${memberCount.toLocaleString()}</div>
     </div>`;
     const marker = L.marker([lat, lng], {
@@ -874,32 +998,31 @@ function buildRegionPopup(r, stats) {
   const topCats = Object.entries(catDist).sort((a,b) => b[1]-a[1]).slice(0, 6);
   let html = `<div class="popup-content">
     <div class="popup-header" style="background:${color}">
-      <h3>${escapeHTML(r)}</h3>
-      <div class="sub">${stats.chapterCount}개 지회 · ${stats.countries}개 활동국가 · DB등록회원 ${stats.memberCount.toLocaleString()}명</div>
+      <h3>${escapeHTML(tRegion(r))}</h3>
+      <div class="sub">${stats.chapterCount}${t('count_chapters')} · ${stats.countries}${t('count_active_countries')} · ${t('stat_members')} ${stats.memberCount.toLocaleString()}${t('count_members')}</div>
     </div>
     <div class="popup-body">
       <div class="popup-stats-grid">
-        <div class="popup-stat"><div class="num">${stats.memberCount.toLocaleString()}</div><div class="lbl">DB등록회원</div></div>
-        <div class="popup-stat"><div class="num">${stats.chapterCount}</div><div class="lbl">지회 수</div></div>
-        <div class="popup-stat"><div class="num">${stats.countries}</div><div class="lbl">활동국가</div></div>
-        <div class="popup-stat"><div class="num">${stats.presCount}</div><div class="lbl">지회장</div></div>
+        <div class="popup-stat"><div class="num">${stats.memberCount.toLocaleString()}</div><div class="lbl">${t('stat_members')}</div></div>
+        <div class="popup-stat"><div class="num">${stats.chapterCount}</div><div class="lbl">${t('chapter_count')}</div></div>
+        <div class="popup-stat"><div class="num">${stats.countries}</div><div class="lbl">${t('active_countries')}</div></div>
+        <div class="popup-stat"><div class="num">${stats.presCount}</div><div class="lbl">${t('presidents_count')}</div></div>
       </div>`;
   if (stats.vacantCount > 0) {
-    html += `<div class="popup-info-row"><span class="lbl">지회장 공석</span><span class="val" style="color:#dc2626">${stats.vacantCount}개 지회</span></div>`;
+    html += `<div class="popup-info-row"><span class="lbl">${t('vacant_count')}</span><span class="val" style="color:#dc2626">${stats.vacantCount}${t('vacant_chapters')}</span></div>`;
   }
   if (topCats.length > 0) {
-    html += `<div class="popup-section-title">주요 업종</div><div class="popup-cat-bar">`;
+    html += `<div class="popup-section-title">${t('main_industries')}</div><div class="popup-cat-bar">`;
     topCats.forEach(([cat, cnt]) => {
       const ccolor = DATA.categoryColors[cat] || '#94a3b8';
-      html += `<span class="popup-cat-tag" style="background:${ccolor}">${escapeHTML(cat)} ${cnt}</span>`;
+      html += `<span class="popup-cat-tag" style="background:${ccolor}">${escapeHTML(tCategory(cat))} ${cnt}</span>`;
     });
     html += `</div>`;
   }
   if (r === '북미주') {
-    // 북미주는 통합 뷰로 진입 (서부+동부 한꺼번에)
-    html += `<button class="popup-action" onclick="window._goNorthAmerica()">→ 북미주 지회 보기</button>`;
+    html += `<button class="popup-action" onclick="window._goNorthAmerica()">${t('view_north_america_chapters')}</button>`;
   } else {
-    html += `<button class="popup-action" onclick="window._zoomTo('${escapeHTML(r)}')">→ ${escapeHTML(r)} 지회 보기</button>`;
+    html += `<button class="popup-action" onclick="window._zoomTo('${escapeHTML(r)}')">${t('view_chapters_in').replace('{region}', escapeHTML(tRegion(r)))}</button>`;
   }
   html += `</div></div>`;
   return html;
@@ -951,30 +1074,30 @@ function buildChapterPopup(c) {
   c.members.forEach(m => { if (m.category) catDist[m.category] = (catDist[m.category] || 0) + 1; });
   let bg = RC[c.region] || '#d62828';
   let statusText = '';
-  if (c.president === '공석') { bg = '#94a3b8'; statusText = '지회장 공석'; }
-  else if (!c.official) { bg = '#f59e0b'; statusText = '공식지회 외'; }
-  else { statusText = `지회장: ${c.president}`; }
+  if (c.president === '공석') { bg = '#94a3b8'; statusText = t('vacant_label'); }
+  else if (!c.official) { bg = '#f59e0b'; statusText = t('unofficial_chapter'); }
+  else { statusText = `${t('president_label')}: ${c.president}`; }
   const chapterFlag = c.iso ? isoToFlagImg(c.iso, 20) : '';
   let html = `<div class="popup-content">
     <div class="popup-header" style="background:${bg}">
-      <h3 style="display:flex;align-items:center;gap:8px">${chapterFlag}<span>${escapeHTML(c.city)}</span></h3>
-      <div class="sub">${escapeHTML(c.country)} · ${escapeHTML(c.region)} · ${statusText}</div>
+      <h3 style="display:flex;align-items:center;gap:8px">${chapterFlag}<span>${escapeHTML(tCity(c.city))}</span></h3>
+      <div class="sub">${escapeHTML(tCountry(c.country))} · ${escapeHTML(tRegion(c.region))} · ${statusText}</div>
     </div>
     <div class="popup-body">
-      <div class="popup-info-row"><span class="lbl">DB등록회원</span><span class="val">${c.members.length}명</span></div>`;
+      <div class="popup-info-row"><span class="lbl">${t('db_members_count')}</span><span class="val">${c.members.length}${t('count_members')}</span></div>`;
   if (state.category) {
-    html += `<div class="popup-info-row"><span class="lbl">${escapeHTML(state.category)}</span><span class="val">${filteredMembers.length}명</span></div>`;
+    html += `<div class="popup-info-row"><span class="lbl">${escapeHTML(tCategory(state.category))}</span><span class="val">${filteredMembers.length}${t('count_members')}</span></div>`;
   }
   if (Object.keys(catDist).length > 0) {
-    html += `<div class="popup-section-title">업종 카테고리 분포</div><div class="popup-cat-bar">`;
+    html += `<div class="popup-section-title">${t('category_distribution')}</div><div class="popup-cat-bar">`;
     Object.entries(catDist).sort((a,b) => b[1]-a[1]).slice(0, 8).forEach(([cat, cnt]) => {
       const color = DATA.categoryColors[cat] || '#94a3b8';
-      html += `<span class="popup-cat-tag" style="background:${color}">${escapeHTML(cat)} ${cnt}</span>`;
+      html += `<span class="popup-cat-tag" style="background:${color}">${escapeHTML(tCategory(cat))} ${cnt}</span>`;
     });
     html += `</div>`;
   }
   if (sorted.length > 0) {
-    html += `<div class="popup-section-title">DB등록회원 ${sorted.length}명 ${state.category ? '(필터링됨)' : ''}</div>`;
+    html += `<div class="popup-section-title">${t('db_members_count')} ${sorted.length}${t('count_members')}${state.category ? t('members_filtered') : ''}</div>`;
     const flag = isoToFlag(c.iso);
     sorted.forEach(m => {
       const tags = getRoleTags(m);
@@ -991,8 +1114,15 @@ function buildChapterPopup(c) {
         const catColor = DATA.categoryColors[m.category] || '#94a3b8';
         const committee = DATA.categoryToCommittee[m.category];
         html += `<div class="m-cat-line">`;
-        html += `<span class="m-cat-tag" style="background:${catColor}">${escapeHTML(m.category)}</span>`;
-        if (committee) html += `<span class="m-recommend">💡 추천: ${escapeHTML(committee.name)}</span>`;
+        html += `<span class="m-cat-tag" style="background:${catColor}">${escapeHTML(tCategory(m.category))}</span>`;
+        if (committee) {
+          // 통상위원회 이름은 그대로 한국어 (옥타 공식 명칭)
+          const recLabel = currentLang === 'ko' ? '💡 추천: ' 
+            : currentLang === 'en' ? '💡 Rec: '
+            : currentLang === 'zh' ? '💡 推荐: '
+            : '💡 推奨: ';
+          html += `<span class="m-recommend">${recLabel}${escapeHTML(committee.name)}</span>`;
+        }
         html += `</div>`;
       }
       if (m.email) html += `<div class="m-email">✉ <a href="mailto:${escapeHTML(m.email)}">${escapeHTML(m.email)}</a></div>`;
@@ -1038,18 +1168,18 @@ function renderList() {
   list.innerHTML = '';
   if (state.view === 'region' && !state.selectedRegion) {
     const displayRegions = DATA.displayRegions || DATA.regions;
-    header.textContent = `${displayRegions.length}개 권역`;
+    header.textContent = `${displayRegions.length}${t('regions_count')}`;
     displayRegions.forEach(r => {
       const s = DATA.regionSummary[r]; if (!s) return;
       const item = document.createElement('div');
       item.className = 'item';
       const subText = r === '북미주' && DATA.regionSummary['북미주서부'] && DATA.regionSummary['북미주동부']
-        ? `${s.totalChapters}개 지회 · 서부 ${DATA.regionSummary['북미주서부'].totalMembers}명 + 동부 ${DATA.regionSummary['북미주동부'].totalMembers}명`
-        : `${s.totalChapters}개 지회 · ${s.countries || 0}개 국가 · 지회장 ${s.presidents}명${s.vacant > 0 ? ` · 공석 ${s.vacant}` : ''}`;
+        ? `${s.totalChapters}${t('count_chapters')} · ${tRegion('북미주서부')} ${DATA.regionSummary['북미주서부'].totalMembers}${t('count_members')} + ${tRegion('북미주동부')} ${DATA.regionSummary['북미주동부'].totalMembers}${t('count_members')}`
+        : `${s.totalChapters}${t('count_chapters')} · ${s.countries || 0}${t('count_countries')} · ${t('president_label')} ${s.presidents}${t('count_members')}${s.vacant > 0 ? ` · ${t('vacant')} ${s.vacant}` : ''}`;
       item.innerHTML = `
         <div class="it-title">
-          <span><span style="display:inline-block;background:${RC[r]};width:10px;height:10px;border-radius:50%;vertical-align:middle;margin-right:6px"></span>${escapeHTML(r)}</span>
-          <span class="badge badge-mem">${s.totalMembers.toLocaleString()}명</span>
+          <span><span style="display:inline-block;background:${RC[r]};width:10px;height:10px;border-radius:50%;vertical-align:middle;margin-right:6px"></span>${escapeHTML(tRegion(r))}</span>
+          <span class="badge badge-mem">${s.totalMembers.toLocaleString()}${t('count_members')}</span>
         </div>
         <div class="it-sub">${subText}</div>`;
       item.onclick = () => {
@@ -1059,6 +1189,7 @@ function renderList() {
           map.setView([40, -98], 3, {animate: true});
           render();
         } else { zoomToRegion(r); }
+        closeSidebarOnMobile();
       };
       list.appendChild(item);
     });
@@ -1066,8 +1197,8 @@ function renderList() {
     const filtered = getFilteredChapters();
     const sorted = [...filtered].sort((a,b) => getFilteredMemberCount(b) - getFilteredMemberCount(a));
     header.innerHTML = state.selectedRegion 
-      ? `<a style="color:var(--red);cursor:pointer;font-weight:600" onclick="window._goRegionView()">← 권역 보기</a> · ${state.selectedRegion} ${filtered.length}개 지회`
-      : `${filtered.length}개 지회 · DB등록회원 ${filtered.reduce((s,c) => s + getFilteredMemberCount(c), 0)}명`;
+      ? `<a style="color:var(--red);cursor:pointer;font-weight:600" onclick="window._goRegionView()">${t('go_back_region')}</a> · ${tRegion(state.selectedRegion)} ${filtered.length}${t('count_chapters')}`
+      : `${filtered.length}${t('count_chapters')} · ${t('db_members_count')} ${filtered.reduce((s,c) => s + getFilteredMemberCount(c), 0)}${t('count_members')}`;
     sorted.forEach(c => {
       const cnt = getFilteredMemberCount(c);
       if (cnt === 0 && state.category) return;
@@ -1075,12 +1206,12 @@ function renderList() {
       item.className = 'item';
       let badge = '';
       if (c.president && c.president !== '공석') badge = `<span class="badge badge-pres">${escapeHTML(c.president)}</span>`;
-      else if (c.president === '공석') badge = `<span class="badge badge-vac">공석</span>`;
-      const regionBadge = `<span class="badge badge-region" style="background:${RC[c.region]}">${escapeHTML(c.region)}</span>`;
+      else if (c.president === '공석') badge = `<span class="badge badge-vac">${t('vacant')}</span>`;
+      const regionBadge = `<span class="badge badge-region" style="background:${RC[c.region]}">${escapeHTML(tRegion(c.region))}</span>`;
       const listFlag = c.iso ? isoToFlagImg(c.iso, 16) : '';
       item.innerHTML = `
-        <div class="it-title"><span style="display:inline-flex;align-items:center;gap:6px">${listFlag}${escapeHTML(c.city)}</span><span class="badge badge-mem">${cnt}명</span></div>
-        <div class="it-sub">${escapeHTML(c.country)}</div>
+        <div class="it-title"><span style="display:inline-flex;align-items:center;gap:6px">${listFlag}${escapeHTML(tCity(c.city))}</span><span class="badge badge-mem">${cnt}${t('count_members')}</span></div>
+        <div class="it-sub">${escapeHTML(tCountry(c.country))}</div>
         <div class="it-meta">${regionBadge} ${badge}</div>`;
       item.onclick = () => {
         map.setView([c.lat, c.lng], 7, {animate: true});
@@ -1088,6 +1219,7 @@ function renderList() {
           const ll = m.getLatLng();
           if (Math.abs(ll.lat - c.lat) < 0.001 && Math.abs(ll.lng - c.lng) < 0.001) m.openPopup();
         });
+        closeSidebarOnMobile();
       };
       list.appendChild(item);
     });
@@ -1104,13 +1236,13 @@ window._goRegionView = function() {
 function renderBreadcrumb() {
   const bc = document.getElementById('breadcrumb');
   if (state.view === 'chapter' && state.selectedRegion === '북미주') {
-    bc.innerHTML = `<a onclick="window._goRegionView()">전세계</a><span class="sep">›</span><span class="current">북미주 (서부+동부)</span>`;
+    bc.innerHTML = `<a onclick="window._goRegionView()">${t('breadcrumb_world')}</a><span class="sep">›</span><span class="current">${tRegion('북미주')}</span>`;
     bc.classList.add('show');
   } else if (state.view === 'chapter' && state.selectedRegion) {
-    bc.innerHTML = `<a onclick="window._goRegionView()">전세계</a><span class="sep">›</span><span class="current">${escapeHTML(state.selectedRegion)}</span>`;
+    bc.innerHTML = `<a onclick="window._goRegionView()">${t('breadcrumb_world')}</a><span class="sep">›</span><span class="current">${escapeHTML(tRegion(state.selectedRegion))}</span>`;
     bc.classList.add('show');
   } else if (state.view === 'chapter') {
-    bc.innerHTML = `<a onclick="window._goRegionView()">전세계</a><span class="sep">›</span><span class="current">전체 지회</span>`;
+    bc.innerHTML = `<a onclick="window._goRegionView()">${t('breadcrumb_world')}</a><span class="sep">›</span><span class="current">${t('breadcrumb_all_chapters')}</span>`;
     bc.classList.add('show');
   } else { bc.classList.remove('show'); }
 }
@@ -1149,7 +1281,30 @@ document.getElementById('searchInput').addEventListener('input', e => {
   }, 200);
 });
 
-document.getElementById('menuBtn').onclick = () => document.getElementById('sidebar').classList.toggle('open');
+// 검색창에서 엔터 누르면 모바일에서 사이드바 닫기
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') closeSidebarOnMobile();
+});
+
+// 모바일 사이드바 토글 + 자동 닫기 헬퍼
+const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+const closeSidebarOnMobile = () => {
+  if (isMobile()) document.getElementById('sidebar').classList.remove('open');
+};
+
+document.getElementById('menuBtn').onclick = () => 
+  document.getElementById('sidebar').classList.toggle('open');
+
+// 사이드바 외부 클릭 시 닫기 (모바일)
+document.addEventListener('click', (e) => {
+  if (!isMobile()) return;
+  const sidebar = document.getElementById('sidebar');
+  const menuBtn = document.getElementById('menuBtn');
+  if (!sidebar.classList.contains('open')) return;
+  // 사이드바 자체나 메뉴버튼 클릭이면 무시
+  if (sidebar.contains(e.target) || menuBtn.contains(e.target)) return;
+  sidebar.classList.remove('open');
+});
 
 map.on('zoomend', () => {
   const z = map.getZoom();
@@ -1179,7 +1334,8 @@ if (window.matchMedia('(max-width: 768px)').matches) {
     DATA = await loadDataFromSheet();
     buildFilters();
     render();
-    document.getElementById('lastUpdate').textContent = '2026년 5월 2일 okta.net DB 기준';
+    document.getElementById('lastUpdate').textContent = t('subtitle');
+    setLang(currentLang);  // 저장된 언어 또는 기본값 적용
     document.getElementById('loadingOverlay').classList.add('hidden');
     setTimeout(() => document.getElementById('loadingOverlay').remove(), 500);
   } catch (e) {
