@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OKTA DB등록 기준 지회지도</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root {
+    --red: #d62828;
+    --red-light: #fef2f2;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #1f2937;
+    --role-exec: #2563eb;
+    --role-board: #dc2626;
+    --role-honor: #d97706;
+    --role-trade: #16a34a;
+    --role-special: #ea580c;
+    --role-pres: #1e3a8a;
+    --role-audit: #1f2937;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif; }
+  body { display: flex; flex-direction: column; background: #f4f5f7; color: var(--gray-900); }
+
+  /* 로딩 화면 */
+  .loading-overlay {
+    position: fixed; inset: 0; z-index: 99999;
+    background: white; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px;
+    transition: opacity 0.4s;
+  }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .spinner {
+    width: 48px; height: 48px; border: 4px solid var(--gray-200);
+    border-top-color: var(--red); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { color: var(--gray-700); font-size: 14px; font-weight: 600; }
+  .loading-sub { color: var(--gray-500); font-size: 12px; }
+  .error-box {
+    background: #fee; border: 1px solid #fcc; padding: 16px 24px;
+    border-radius: 8px; color: #c33; max-width: 500px; text-align: center;
+  }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 18px; background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08); z-index: 1000;
+    border-bottom: 3px solid var(--red); flex-shrink: 0;
+  }
+  .title-block h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+  .title-block .sub-line { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; font-size: 11px; align-items: center; }
+  .sub { color: var(--gray-500); }
+  .sub-divider { color: var(--gray-300); }
+  .credit { color: var(--gray-500); }
+  .credit strong { color: var(--red); font-weight: 700; }
+  .ver-tag {
+    display: inline-block; background: var(--red-light); color: var(--red);
+    padding: 1px 7px; border-radius: 10px; font-size: 9px; font-weight: 700;
+    border: 1px solid #fecaca;
+  }
+  .live-tag {
+    display: inline-block; background: #dcfce7; color: #166534;
+    padding: 1px 7px; border-radius: 10px; font-size: 9px; font-weight: 700;
+    border: 1px solid #86efac; margin-left: 4px;
+  }
+  .live-tag::before { content: "●"; margin-right: 3px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  
+  .header-stats { display: flex; gap: 10px; align-items: center; }
+  .stat-pill {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 4px 12px; border-radius: 6px; background: var(--gray-50);
+    min-width: 60px; border: 1px solid var(--gray-200);
+  }
+  .stat-pill .num { font-size: 14px; font-weight: 700; color: var(--red); }
+  .stat-pill .lbl { font-size: 9px; color: var(--gray-500); margin-top: 1px; white-space: nowrap; }
+
+  .view-toggle {
+    position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+    z-index: 999; background: white; padding: 4px;
+    border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,.12);
+    display: flex; gap: 2px;
+  }
+  .view-toggle button {
+    border: none; background: transparent; padding: 7px 16px;
+    cursor: pointer; font-size: 12px; font-weight: 600; color: var(--gray-500);
+    border-radius: 6px; transition: all 0.15s;
+  }
+  .view-toggle button.active { background: var(--red); color: white; }
+  .view-toggle button:hover:not(.active) { background: var(--gray-100); }
+
+  .breadcrumb {
+    position: absolute; top: 70px; left: 16px; z-index: 998;
+    background: white; padding: 8px 14px; border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12); display: none;
+    align-items: center; gap: 8px; font-size: 12px;
+  }
+  .breadcrumb.show { display: flex; }
+  .breadcrumb a { color: var(--red); text-decoration: none; cursor: pointer; font-weight: 600; }
+  .breadcrumb .sep { color: var(--gray-300); }
+  .breadcrumb .current { color: var(--gray-700); font-weight: 600; }
+
+  .refresh-btn {
+    position: absolute; top: 16px; right: 16px; z-index: 999;
+    background: white; border: 1px solid var(--gray-200); padding: 6px 12px;
+    border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    cursor: pointer; font-size: 11px; font-weight: 600; color: var(--gray-700);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .refresh-btn:hover { background: var(--gray-50); color: var(--red); }
+  .refresh-btn.loading { pointer-events: none; opacity: 0.6; }
+  .refresh-btn.loading svg { animation: spin 1s linear infinite; }
+
+  main { flex: 1; display: flex; overflow: hidden; position: relative; }
+
+  aside { width: 340px; background: white; border-right: 1px solid var(--gray-200); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+  .search-box { padding: 12px; border-bottom: 1px solid var(--gray-200); }
+  .search-box input {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--gray-300); border-radius: 6px;
+    font-size: 13px; outline: none; transition: all 0.15s;
+  }
+  .search-box input:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(214,40,40,.12); }
+
+  .filter-section { border-bottom: 1px solid var(--gray-200); }
+  .filter-header {
+    padding: 10px 12px; font-size: 11px; font-weight: 700; color: var(--gray-700);
+    text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; user-select: none;
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--gray-50);
+  }
+  .filter-header:hover { background: var(--gray-100); }
+  .filter-header .arrow { transition: transform 0.2s; font-size: 10px; }
+  .filter-header.collapsed .arrow { transform: rotate(-90deg); }
+  .filter-body { padding: 8px 12px 10px; display: flex; flex-wrap: wrap; gap: 5px; }
+  .filter-body.collapsed { display: none; }
+  .filter-chip {
+    padding: 4px 10px; border-radius: 12px; background: var(--gray-100);
+    font-size: 11px; cursor: pointer; border: 1px solid transparent;
+    user-select: none; white-space: nowrap; transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .filter-chip.active { background: var(--red); color: white; }
+  .filter-chip:hover:not(.active) { background: var(--gray-200); }
+  .filter-chip .cnt { opacity: 0.6; font-size: 10px; }
+  .filter-chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .results-list { flex: 1; overflow-y: auto; padding: 4px; }
+  .results-header {
+    padding: 8px 12px; font-size: 11px; color: var(--gray-500);
+    font-weight: 600; background: var(--gray-50); border-bottom: 1px solid var(--gray-200);
+  }
+  .item {
+    padding: 10px 12px; border-bottom: 1px solid var(--gray-100);
+    cursor: pointer; transition: background 0.15s;
+  }
+  .item:hover { background: var(--red-light); }
+  .item .it-title { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; }
+  .item .it-sub { font-size: 11px; color: var(--gray-500); margin-top: 3px; }
+  .item .it-meta { display: flex; gap: 6px; margin-top: 5px; font-size: 10px; flex-wrap: wrap; }
+  .badge { padding: 1px 6px; border-radius: 8px; font-weight: 600; }
+  .badge-pres { background: #dbeafe; color: #1e40af; }
+  .badge-vac { background: #fee2e2; color: #b91c1c; }
+  .badge-mem { background: var(--gray-100); color: var(--gray-700); }
+  .badge-region { color: white; }
+
+  #map { flex: 1; }
+
+  .map-marker {
+    border-radius: 50%; border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,.35);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 700;
+    transition: transform 0.15s; cursor: pointer;
+  }
+  .map-marker:hover { transform: scale(1.12); }
+  .map-marker.region {
+    border-width: 4px; box-shadow: 0 4px 14px rgba(0,0,0,.4);
+    flex-direction: column; padding: 6px;
+    text-align: center; line-height: 1.1;
+  }
+  .map-marker.region .r-name { font-size: 12px; font-weight: 800; letter-spacing: -0.3px; }
+  .map-marker.region .r-chap { font-size: 10px; opacity: 0.9; margin-top: 3px; font-weight: 600; }
+  .map-marker.region .r-mem { font-size: 15px; font-weight: 800; margin-top: 2px; letter-spacing: -0.5px; }
+  .map-marker.chapter.vacant { background: #94a3b8; }
+  .map-marker.chapter.unofficial { background: #fbbf24; color: #78350f; }
+
+  .leaflet-popup-content-wrapper { border-radius: 8px; padding: 0; overflow: hidden; }
+  .leaflet-popup-content { margin: 0; padding: 0; min-width: 300px; max-width: 400px; }
+  .popup-content { font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif; }
+  .popup-header { padding: 12px 14px; color: white; }
+  .popup-header h3 { font-size: 16px; font-weight: 700; margin-bottom: 3px; }
+  .popup-header .sub { font-size: 11px; opacity: 0.9; color: white; }
+  .popup-body { padding: 12px 14px; max-height: 460px; overflow-y: auto; }
+  .popup-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+  .popup-stat { background: var(--gray-50); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--gray-200); }
+  .popup-stat .num { font-size: 18px; font-weight: 700; color: var(--gray-900); line-height: 1; }
+  .popup-stat .lbl { font-size: 10px; color: var(--gray-500); margin-top: 3px; }
+  .popup-info-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; border-bottom: 1px solid var(--gray-100); }
+  .popup-info-row .lbl { color: var(--gray-500); }
+  .popup-info-row .val { color: var(--gray-900); font-weight: 600; }
+  .popup-section-title {
+    font-size: 11px; font-weight: 700; color: var(--gray-700);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin: 12px 0 6px;
+  }
+  .popup-cat-bar { display: flex; flex-wrap: wrap; gap: 4px; }
+  .popup-cat-tag { padding: 2px 8px; border-radius: 8px; font-size: 10px; color: white; font-weight: 600; }
+
+  .popup-member {
+    padding: 8px 10px; margin-bottom: 6px; font-size: 12px;
+    background: white; border: 1px solid var(--gray-200);
+    border-radius: 6px; border-left: 3px solid var(--gray-200);
+  }
+  .popup-member.has-role { border-left-color: var(--gray-400); }
+  .m-line1 { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
+  .m-flag { font-size: 16px; line-height: 1; }
+  .m-name { font-weight: 700; color: var(--gray-900); font-size: 13px; }
+  .role-tag {
+    display: inline-block; padding: 1px 7px; border-radius: 4px;
+    font-size: 10px; font-weight: 700; color: white;
+    line-height: 1.6; white-space: nowrap;
+  }
+  .role-pres { background: var(--role-pres); }
+  .role-board { background: var(--role-board); }
+  .role-exec { background: var(--role-exec); }
+  .role-honor { background: var(--role-honor); }
+  .role-trade { background: var(--role-trade); }
+  .role-special { background: var(--role-special); }
+  .role-audit { background: var(--role-audit); }
+  .m-company { font-size: 11px; color: var(--gray-700); margin-top: 3px; }
+  .m-industry { font-size: 10px; color: var(--gray-500); margin-top: 1px; }
+  .m-cat-line { font-size: 10px; color: var(--gray-500); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .m-cat-tag {
+    display: inline-block; padding: 1px 6px; border-radius: 4px;
+    font-size: 9px; font-weight: 700; color: white;
+  }
+  .m-recommend {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 10px; font-weight: 600;
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e; border: 1px solid #fcd34d;
+    margin-top: 3px;
+  }
+  .m-email { font-size: 10px; color: var(--role-exec); margin-top: 3px; word-break: break-all; }
+  .m-email a { color: var(--role-exec); text-decoration: none; }
+  .m-email a:hover { text-decoration: underline; }
+
+  .popup-action {
+    display: block; width: 100%; padding: 8px;
+    background: var(--red); color: white; border: none;
+    border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;
+    margin-top: 10px;
+  }
+
+  .legend {
+    position: absolute; left: 16px; bottom: 16px; z-index: 998;
+    background: white; border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,.15); font-size: 11px;
+    max-width: 240px; overflow: hidden;
+    transition: all 0.25s;
+  }
+  .legend-header {
+    padding: 8px 14px; cursor: pointer; user-select: none;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
+  }
+  .legend-title { font-weight: 700; color: var(--gray-700);
+    text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; }
+  .legend-arrow { font-size: 10px; transition: transform 0.2s; color: var(--gray-500); }
+  .legend.collapsed .legend-arrow { transform: rotate(-90deg); }
+  .legend-body {
+    padding: 0 14px 10px;
+    max-height: 400px; overflow-y: auto;
+    transition: max-height 0.25s, padding 0.25s;
+  }
+  .legend.collapsed .legend-body { max-height: 0; padding-top: 0; padding-bottom: 0; }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 2px 0; cursor: pointer; }
+  .legend-item:hover { color: var(--red); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  @media (max-width: 768px) {
+    aside { position: absolute; left: -100%; top: 0; bottom: 0; z-index: 998;
+            box-shadow: 4px 0 16px rgba(0,0,0,.15); transition: left 0.25s; }
+    aside.open { left: 0; }
+    .header-stats .stat-pill:nth-child(n+3) { display: none; }
+    .menu-btn { display: block !important; }
+    .legend { left: 12px; bottom: 12px; max-width: 180px; font-size: 10px; }
+    .legend-body { max-height: 50vh; }
+    .title-block h1 { font-size: 13px; }
+    .refresh-btn { padding: 4px 8px; font-size: 10px; }
+  }
+  .menu-btn {
+    display: none; background: none; border: none; padding: 6px 10px;
+    cursor: pointer; font-size: 18px; color: var(--gray-700);
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--gray-50); }
+  ::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Google Sheets에서 데이터 로딩 중...</div>
+  <div class="loading-sub" id="loadingSub">시트 연결 중</div>
+</div>
+
+<header>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button class="menu-btn" id="menuBtn">☰</button>
+    <div class="title-block">
+      <h1>OKTA DB등록 기준 지회지도 <span class="ver-tag">BETA</span><span class="live-tag">LIVE</span></h1>
+      <div class="sub-line">
+        <span class="sub" id="lastUpdate">Google Sheets 연동</span>
+        <span class="sub-divider">·</span>
+        <span class="credit">Created by <strong>옥타미디어운영위원회</strong> v20260502</span>
+      </div>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="stat-pill"><span class="num" id="statMembers">-</span><span class="lbl">DB등록회원</span></div>
+    <div class="stat-pill"><span class="num" id="statChapters">-</span><span class="lbl">지회</span></div>
+    <div class="stat-pill"><span class="num" id="statCountries">-</span><span class="lbl">활동국가</span></div>
+    <div class="stat-pill"><span class="num" id="statPres">-</span><span class="lbl">지회장</span></div>
+    <div class="stat-pill"><span class="num">9</span><span class="lbl">권역</span></div>
+  </div>
+</header>
+
+<main>
+  <aside id="sidebar">
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="🔍 회원/회사/지회/도시 검색...">
+    </div>
+    <div class="filter-section">
+      <div class="filter-header" data-target="categoryFilter"><span>업종 카테고리</span><span class="arrow">▼</span></div>
+      <div class="filter-body" id="categoryFilter"></div>
+    </div>
+    <div class="filter-section">
+      <div class="filter-header" data-target="statusFilter"><span>지회장 상태</span><span class="arrow">▼</span></div>
+      <div class="filter-body" id="statusFilter"></div>
+    </div>
+    <div class="results-header" id="resultsHeader">로딩 중...</div>
+    <div class="results-list" id="resultsList"></div>
+  </aside>
+
+  <div id="map">
+    <div class="view-toggle">
+      <button data-view="region" class="active">권역 뷰</button>
+      <button data-view="chapter">지회 뷰</button>
+    </div>
+    <div class="breadcrumb" id="breadcrumb"></div>
+    <button class="refresh-btn" id="refreshBtn" title="시트 데이터 다시 불러오기">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 0 1 14.85-6.85L21 8M3 8v6h6M21 12a9 9 0 0 1-14.85 6.85L3 16M21 16v-6h-6"/></svg>
+      <span>새로고침</span>
+    </button>
+    <div class="legend" id="legend">
+      <div class="legend-header" id="legendHeader">
+        <span class="legend-title">권역 (DB등록회원)</span>
+        <span class="legend-arrow">▼</span>
+      </div>
+      <div class="legend-body">
+        <div id="legendItems"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ============================================================
+// 정적 메타데이터 (좌표, 카테고리, 권역 정보 등)
+// ============================================================
+const META = {"cityCoords":{"Argentina":{"Buenos Aires":[-34.6037,-58.3816]},"Brazil":{"Sao Paulo":[-23.5505,-46.6333]},"Chile":{"Santiago":[-33.4489,-70.6693]},"Paraguay":{"Asuncion":[-25.2637,-57.5759],"Ciudad del Este":[-25.5097,-54.6111]},"Peru":{"Lima":[-12.0464,-77.0428]},"Australia":{"Adelaide":[-34.9285,138.6007],"Brisbane":[-27.4698,153.0251],"Canberra":[-35.2809,149.13],"Melbourne":[-37.8136,144.9631],"Perth":[-31.9505,115.8605],"Sydney":[-33.8688,151.2093],"Tasmania":[-42.8821,147.3272]},"New Zealand":{"Auckland":[-36.8485,174.7633],"Christchurch":[-43.532,172.6306]},"Cambodia":{"Phnom Penh":[11.5564,104.9282]},"Hong Kong":{"Hong Kong/Macau":[22.3193,114.1694]},"Laos":{"Vientiane":[17.9757,102.6331]},"Philippines":{"Manila":[14.5995,120.9842]},"Taiwan":{"Taipei":[25.033,121.5654]},"Thailand":{"Bangkok":[13.7563,100.5018]},"USA":{"Guam":[13.4443,144.7937],"Atlanta":[33.749,-84.388],"Dallas":[32.7767,-96.797],"Houston":[29.7604,-95.3698],"San Juan":[18.4655,-66.1057],"Savannah":[32.0809,-81.0912],"Boston":[42.3601,-71.0589],"Chicago":[41.8781,-87.6298],"Detroit":[42.3314,-83.0458],"New Jersey":[40.0583,-74.4057],"New York":[40.7128,-74.006],"Washington D.C.":[38.9072,-77.0369],"Denver":[39.7392,-104.9903],"Los Angeles":[34.0522,-118.2437],"Las Vegas":[36.1699,-115.1398],"San Francisco":[37.7749,-122.4194],"San Diego":[32.7157,-117.1611],"Seattle":[47.6062,-122.3321],"Miami":[25.7617,-80.1918],"Fort Lee":[40.8512,-73.9701],"Fairfax":[38.8462,-77.3064],"Raleigh":[35.7796,-78.6382],"Tampa":[27.9506,-82.4572]},"Vietnam":{"Hanoi":[21.0285,105.8542],"Ho Chi Minh":[10.8231,106.6297]},"Bangladesh":{"Dhaka":[23.8103,90.4125]},"India":{"New Delhi":[28.6139,77.209],"Bengaluru":[12.9716,77.5946],"Mumbai":[19.076,72.8777]},"Indonesia":{"Jakarta":[-6.2088,106.8456],"Bali":[-8.3405,115.092]},"Malaysia":{"Kuala Lumpur":[3.139,101.6869]},"Myanmar":{"Yangon":[16.8661,96.1951]},"Singapore":{"Singapore":[1.3521,103.8198]},"Belgium":{"Brussels":[50.8503,4.3517]},"France":{"Paris":[48.8566,2.3522]},"Germany":{"Dusseldorf":[51.2277,6.7735],"Frankfurt":[50.1109,8.6821],"Munich":[48.1351,11.582],"Berlin":[52.52,13.405]},"Italy":{"Milano":[45.4642,9.19]},"Norway":{"Oslo":[59.9139,10.7522]},"Spain":{"Barcelona":[41.3851,2.1734],"Madrid":[40.4168,-3.7038]},"Sweden":{"Stockholm":[59.3293,18.0686]},"Switzerland":{"Zurich":[47.3769,8.5417]},"UK":{"London":[51.5074,-0.1278]},"Egypt":{"Cairo":[30.0444,31.2357]},"Kenya":{"Nairobi":[-1.2921,36.8219]},"Malawi":{"Lilongwe":[-13.9626,33.7741]},"Morocco":{"Casablanca":[33.5731,-7.5898]},"South Africa":{"Cape Town":[-33.9249,18.4241],"Johannesburg":[-26.2041,28.0473]},"Tanzania":{"Dar es Salaam":[-6.7924,39.2083]},"Kazakhstan":{"Almaty":[43.222,76.8512]},"Kyrgyzstan":{"Bishkek":[42.8746,74.5698]},"Russia":{"Saint Petersburg":[59.9311,30.3609],"Vladivostok":[43.1198,131.8869],"Moscow":[55.7558,37.6173]},"Tajikistan":{"Dushanbe":[38.5598,68.787]},"Uzbekistan":{"Tashkent":[41.2995,69.2401]},"Japan":{"Chiba":[35.6074,140.1065],"Saitama":[35.8617,139.6455],"Sapporo":[43.0642,141.3469],"Tokyo":[35.6762,139.6503],"Yokohama":[35.4437,139.638],"Fukuoka":[33.5904,130.4017],"Hiroshima":[34.3853,132.4553],"Kumamoto":[32.7898,130.7417],"Nagoya":[35.1815,136.9066],"Osaka":[34.6937,135.5023]},"Austria":{"Wien":[48.2082,16.3738]},"Bulgaria":{"Sofia":[42.6977,23.3219]},"Czech Republic":{"Prague":[50.0755,14.4378]},"Hungary":{"Budapest":[47.4979,19.0402]},"Poland":{"Warsaw":[52.2297,21.0122]},"Slovakia":{"Bratislava":[48.1486,17.1077]},"Turkiye":{"Istanbul":[41.0082,28.9784]},"Ukraine":{"Kyiv":[50.4501,30.5234]},"China":{"Qingdao":[36.0671,120.3826],"Changchun":[43.8171,125.3235],"Dalian":[38.914,121.6147],"Dandong":[40.1287,124.3954],"Fushun":[41.8806,123.9572],"Harbin":[45.8038,126.534],"Jilin":[43.8378,126.5494],"Shenyang":[41.8057,123.4315],"Yanji":[42.9069,129.5078],"Chengdu":[30.5728,104.0668],"Guangzhou":[23.1291,113.2644],"Haikou":[20.044,110.1999],"Kunming":[25.0389,102.7183],"Shenzhen":[22.5431,114.0579],"Zhangjiajie":[29.117,110.4793],"Nanjing":[32.0603,118.7969],"Shanghai":[31.2304,121.4737],"Suzhou":[31.2989,120.5853],"Yiwu":[29.3066,120.0764],"Beijing":[39.9042,116.4074],"Hulunbuir":[49.2122,119.7656],"Sanhe":[39.9839,117.0728],"Tianjin":[39.3434,117.3616],"Weihai":[37.5128,122.1163],"Xi'an":[34.3416,108.9398],"Yantai":[37.4638,121.4478],"Tonghua":[41.7212,125.9275],"Chongqing":[29.563,106.5516],"Changsha":[28.2282,112.9388]},"Bahrain":{"Bahrain":[26.0667,50.5577]},"Oman":{"Muscat":[23.588,58.3829]},"Saudi Arabia":{"Jeddah":[21.4858,39.1925],"Riyadh":[24.7136,46.6753]},"United Arab Emirates":{"Dubai":[25.2048,55.2708],"Abu Dhabi":[24.4539,54.3773]},"Dominican Republic":{"Santo Domingo":[18.4861,-69.9312]},"Mexico":{"Mexico City":[19.4326,-99.1332],"Monterrey":[25.6866,-100.3161]},"Panama":{"Panama City":[8.9824,-79.5199]},"Costa Rica":{"San jose":[9.9281,-84.0907],"San Jose":[9.9281,-84.0907]},"Canada":{"Calgary":[51.0447,-114.0719],"Edmonton":[53.5461,-113.4938],"Toronto":[43.6532,-79.3832],"Vancouver":[49.2827,-123.1207],"Windsor":[42.3149,-83.0364],"Montreal":[45.5017,-73.5673]},"Sri Lanka":{"Colombo":[6.9271,79.8612]},"Romania":{"Bucharest":[44.4268,26.1025]},"Mongolia":{"Ulaanbaatar":[47.8864,106.9057]},"Denmark":{"Copenhagen":[55.6761,12.5683]},"Netherlands":{"Amsterdam":[52.3676,4.9041]},"Georgia":{"Tbilisi":[41.7151,44.8271]},"Ghana":{"Accra":[5.6037,-0.187]},"Botswana":{"Gaborone":[-24.6282,25.9231]},"Finland":{"Helsinki":[60.1699,24.9384]},"Ecuador":{"Quito":[-0.1807,-78.4678]},"Uruguay":{"Montevideo":[-34.9011,-56.1645]},"Algeria":{"Algiers":[36.7538,3.0588]},"Colombia":{"Bogota":[4.711,-74.0721]},"Iran":{"Teheran":[35.6892,51.389]},"Kuwait":{"Kuwait":[29.3759,47.9774]},"Albania":{"Tirana":[41.3275,19.8187]},"Nepal":{"Kathmandu":[27.7172,85.324]},"Madagascar":{"Antananarivo":[-18.8792,47.5079]},"Nigeria":{"Lagos":[6.5244,3.3792]}},"countryRegion":{"Argentina":"중남미","Brazil":"중남미","Chile":"중남미","Paraguay":"중남미","Peru":"중남미","Australia":"대양주","New Zealand":"대양주","Cambodia":"아시아","Hong Kong":"아시아","Laos":"아시아","Philippines":"아시아","Taiwan":"아시아","Thailand":"아시아","USA":"북미주서부","Vietnam":"아시아","Bangladesh":"아시아","India":"아시아","Indonesia":"아시아","Malaysia":"아시아","Myanmar":"아시아","Singapore":"아시아","Belgium":"유럽·유라시아","France":"유럽·유라시아","Germany":"유럽·유라시아","Italy":"유럽·유라시아","Norway":"유럽·유라시아","Spain":"유럽·유라시아","Sweden":"유럽·유라시아","Switzerland":"유럽·유라시아","UK":"유럽·유라시아","Egypt":"중동·아프리카","Kenya":"중동·아프리카","Malawi":"중동·아프리카","Morocco":"중동·아프리카","South Africa":"중동·아프리카","Tanzania":"중동·아프리카","Kazakhstan":"유럽·유라시아","Kyrgyzstan":"유럽·유라시아","Russia":"유럽·유라시아","Tajikistan":"유럽·유라시아","Uzbekistan":"유럽·유라시아","Japan":"일본","Austria":"유럽·유라시아","Bulgaria":"유럽·유라시아","Czech Republic":"유럽·유라시아","Hungary":"유럽·유라시아","Poland":"유럽·유라시아","Slovakia":"유럽·유라시아","Turkiye":"유럽·유라시아","Ukraine":"유럽·유라시아","China":"중국","Bahrain":"중동·아프리카","Oman":"중동·아프리카","Saudi Arabia":"중동·아프리카","United Arab Emirates":"중동·아프리카","Dominican Republic":"중남미","Mexico":"중남미","Panama":"중남미","Costa Rica":"중남미","Canada":"북미주동부","Albania":"유럽·유라시아","Botswana":"중동·아프리카","Ghana":"중동·아프리카","Algeria":"중동·아프리카","Madagascar":"중동·아프리카","Nigeria":"중동·아프리카","Nepal":"아시아","Mongolia":"아시아","Sri Lanka":"아시아","Georgia":"유럽·유라시아","Colombia":"중남미","Ecuador":"중남미","Uruguay":"중남미","Venezuela":"중남미","Iran":"중동·아프리카","Kuwait":"중동·아프리카","Romania":"유럽·유라시아","Denmark":"유럽·유라시아","Netherlands":"유럽·유라시아","Finland":"유럽·유라시아"},"categories":["리빙 & 뷰티","식음료, 요식업","전기, 전자","화학, 자원","건축, 재활용","호텔, 여행","건강식품, 미용용품","금융, 법률, 부동산","섬유, 섬유제품","물류","전자상거래","교육, 문화, 리크루팅","기계, 공구","4차산업, 컨텐츠, 플랫폼","기업회의, 포상관광, 컨벤션, 전시","종합무역","서비스업","기타"],"categoryColors":{"리빙 & 뷰티":"#ec4899","식음료, 요식업":"#f59e0b","전기, 전자":"#3b82f6","화학, 자원":"#8b5cf6","건축, 재활용":"#84cc16","호텔, 여행":"#06b6d4","건강식품, 미용용품":"#10b981","금융, 법률, 부동산":"#1e40af","섬유, 섬유제품":"#d946ef","물류":"#f97316","전자상거래":"#14b8a6","교육, 문화, 리크루팅":"#a855f7","기계, 공구":"#64748b","4차산업, 컨텐츠, 플랫폼":"#6366f1","기업회의, 포상관광, 컨벤션, 전시":"#ef4444","종합무역":"#475569","서비스업":"#94a3b8","기타":"#cbd5e1"},"regions":["북미주서부","북미주동부","중남미","유럽·유라시아","중동·아프리카","아시아","대양주","중국","일본"],"regionColors":{"북미주서부":"#3b82f6","북미주동부":"#1e40af","중남미":"#10b981","유럽·유라시아":"#8b5cf6","중동·아프리카":"#f59e0b","아시아":"#ef4444","대양주":"#06b6d4","중국":"#dc2626","일본":"#ec4899","북미주":"#1d4ed8"},"regionViews":{"북미주서부":{"lat":39,"lng":-115,"zoom":4},"북미주동부":{"lat":38,"lng":-82,"zoom":4},"중남미":{"lat":-20,"lng":-60,"zoom":3},"유럽·유라시아":{"lat":50,"lng":30,"zoom":3},"중동·아프리카":{"lat":5,"lng":30,"zoom":3},"아시아":{"lat":15,"lng":100,"zoom":4},"대양주":{"lat":-28,"lng":140,"zoom":4},"중국":{"lat":35,"lng":110,"zoom":4},"일본":{"lat":36,"lng":138,"zoom":5},"북미주":{"lat":40,"lng":-98,"zoom":3}},"displayRegions":["북미주","중남미","유럽·유라시아","중동·아프리카","아시아","대양주","중국","일본"],"categoryToCommittee":{"리빙 & 뷰티":{"no":1,"name":"1통상위원회 (리빙 & 뷰티)","chair":"박노진"},"식음료, 요식업":{"no":2,"name":"2통상위원회 (식음료, 요식업)","chair":"신학수"},"전기, 전자":{"no":3,"name":"3통상위원회 (전기, 전자)","chair":"이춘화"},"화학, 자원":{"no":4,"name":"4통상위원회 (화학, 자원)","chair":"김태훈"},"건축, 재활용":{"no":5,"name":"5통상위원회 (건축, 재활용)","chair":"정웅섭"},"호텔, 여행":{"no":6,"name":"6통상위원회 (호텔, 여행)","chair":"박현"},"건강식품, 미용용품":{"no":7,"name":"7통상위원회 (건강식품, 미용용품)","chair":"김남연"},"금융, 법률, 부동산":{"no":8,"name":"8통상위원회 (금융, 법률, 부동산)","chair":"남승현"},"섬유, 섬유제품":{"no":9,"name":"9통상위원회 (섬유, 섬유제품)","chair":"김병철"},"물류":{"no":10,"name":"10통상위원회 (물류)","chair":"김충남"},"전자상거래":{"no":11,"name":"11통상위원회 (전자상거래)","chair":"서영두"},"교육, 문화, 리크루팅":{"no":12,"name":"12통상위원회 (교육, 문화, 리크루팅)","chair":"최세호"},"기계, 공구":{"no":13,"name":"13통상위원회 (기계, 공구)","chair":"김영남"},"4차산업, 컨텐츠, 플랫폼":{"no":14,"name":"14통상위원회 (4차산업, 컨텐츠, 플랫폼)","chair":"지준의"},"기업회의, 포상관광, 컨벤션, 전시":{"no":15,"name":"15통상위원회 (기업회의, 포상관광, 컨벤션, 전시)","chair":"이동완"}},"officialChapters":["Argentina|Buenos Aires","Australia|Adelaide","Australia|Brisbane","Australia|Canberra","Australia|Melbourne","Australia|Perth","Australia|Sydney","Australia|Tasmania","Austria|Wien","Bahrain|Bahrain","Bangladesh|Dhaka","Belgium|Brussels","Botswana|Gaborone","Brazil|Sao Paulo","Bulgaria|Sofia","Cambodia|Phnom Penh","Canada|Calgary","Canada|Edmonton","Canada|Montreal","Canada|Toronto","Canada|Vancouver","Canada|Windsor","Chile|Santiago","China|Beijing","China|Changchun","China|Chengdu","China|Dalian","China|Dandong","China|Fushun","China|Guangzhou","China|Haikou","China|Harbin","China|Hulunbuir","China|Jilin","China|Kunming","China|Nanjing","China|Qingdao","China|Sanhe","China|Shanghai","China|Shenyang","China|Shenzhen","China|Suzhou","China|Tianjin","China|Weihai","China|Xi'an","China|Yanji","China|Yantai","China|Yiwu","China|Zhangjiajie","Colombia|Bogota","Costa Rica|San Jose","Czech Republic|Prague","Denmark|Copenhagen","Dominican Republic|Santo Domingo","Ecuador|Quito","Egypt|Cairo","Finland|Helsinki","France|Paris","Georgia|Tbilisi","Germany|Berlin","Germany|Dusseldorf","Germany|Frankfurt","Germany|Munich","Hong Kong|Hong Kong/Macau","Hungary|Budapest","India|Bengaluru","India|Mumbai","India|New Delhi","Indonesia|Jakarta","Iran|Teheran","Italy|Milano","Japan|Chiba","Japan|Fukuoka","Japan|Hiroshima","Japan|Kumamoto","Japan|Nagoya","Japan|Osaka","Japan|Saitama","Japan|Sapporo","Japan|Tokyo","Japan|Yokohama","Kazakhstan|Almaty","Kenya|Nairobi","Kuwait|Kuwait","Kyrgyzstan|Bishkek","Laos|Vientiane","Madagascar|Antananarivo","Malawi|Lilongwe","Malaysia|Kuala Lumpur","Mexico|Mexico City","Mexico|Monterrey","Mongolia|Ulaanbaatar","Morocco|Casablanca","Myanmar|Yangon","Nepal|Kathmandu","Netherlands|Amsterdam","New Zealand|Auckland","New Zealand|Christchurch","Nigeria|Lagos","Norway|Oslo","Oman|Muscat","Panama|Panama City","Paraguay|Asuncion","Paraguay|Ciudad del Este","Peru|Lima","Philippines|Manila","Poland|Warsaw","Romania|Bucharest","Russia|Moscow","Russia|Saint Petersburg","Russia|Vladivostok","Saudi Arabia|Jeddah","Saudi Arabia|Riyadh","Singapore|Singapore","Slovakia|Bratislava","South Africa|Cape Town","South Africa|Johannesburg","Spain|Barcelona","Spain|Madrid","Sri Lanka|Colombo","Sweden|Stockholm","Switzerland|Zurich","Taiwan|Taipei","Tajikistan|Dushanbe","Tanzania|Dar es Salaam","Thailand|Bangkok","Turkiye|Istanbul","UK|London","USA|Atlanta","USA|Boston","USA|Chicago","USA|Dallas","USA|Denver","USA|Detroit","USA|Fort Lee","USA|Guam","USA|Houston","USA|Las Vegas","USA|Los Angeles","USA|Miami","USA|New Jersey","USA|New York","USA|Raleigh","USA|San Diego","USA|San Francisco","USA|San Juan","USA|Savannah","USA|Seattle","USA|Tampa","USA|Washington D.C.","Ukraine|Kyiv","United Arab Emirates|Abu Dhabi","United Arab Emirates|Dubai","Uruguay|Montevideo","Uzbekistan|Tashkent","Vietnam|Hanoi","Vietnam|Ho Chi Minh"],"officialRegions":{"United Arab Emirates|Abu Dhabi":"중동·아프리카","United Arab Emirates|Dubai":"중동·아프리카","Argentina|Buenos Aires":"중남미","Australia|Adelaide":"대양주","Australia|Brisbane":"대양주","Australia|Canberra":"대양주","Australia|Melbourne":"대양주","Australia|Perth":"대양주","Australia|Sydney":"대양주","Australia|Tasmania":"대양주","Austria|Wien":"유럽·유라시아","Bahrain|Bahrain":"중동·아프리카","Bangladesh|Dhaka":"아시아","Belgium|Brussels":"유럽·유라시아","Botswana|Gaborone":"중동·아프리카","Brazil|Sao Paulo":"중남미","Bulgaria|Sofia":"유럽·유라시아","Cambodia|Phnom Penh":"아시아","Canada|Calgary":"북미주서부","Canada|Edmonton":"북미주서부","Canada|Montreal":"북미주동부","Canada|Toronto":"북미주동부","Canada|Vancouver":"북미주서부","Canada|Windsor":"북미주동부","Chile|Santiago":"중남미","China|Beijing":"중국","China|Changchun":"중국","China|Chengdu":"중국","China|Dalian":"중국","China|Dandong":"중국","China|Fushun":"중국","China|Guangzhou":"중국","China|Haikou":"중국","China|Harbin":"중국","China|Hulunbuir":"중국","China|Jilin":"중국","China|Kunming":"중국","China|Nanjing":"중국","China|Qingdao":"중국","China|Sanhe":"중국","China|Shanghai":"중국","China|Shenyang":"중국","China|Shenzhen":"중국","China|Suzhou":"중국","China|Tianjin":"중국","China|Weihai":"중국","China|Xi'an":"중국","China|Yanji":"중국","China|Yantai":"중국","China|Yiwu":"중국","China|Zhangjiajie":"중국","Colombia|Bogota":"중남미","Czech Republic|Prague":"유럽·유라시아","Denmark|Copenhagen":"유럽·유라시아","Dominican Republic|Santo Domingo":"중남미","Ecuador|Quito":"중남미","Egypt|Cairo":"중동·아프리카","Finland|Helsinki":"유럽·유라시아","France|Paris":"유럽·유라시아","Georgia|Tbilisi":"유럽·유라시아","Germany|Berlin":"유럽·유라시아","Germany|Dusseldorf":"유럽·유라시아","Germany|Frankfurt":"유럽·유라시아","Germany|Munich":"유럽·유라시아","Hong Kong|Hong Kong/Macau":"아시아","Hungary|Budapest":"유럽·유라시아","India|Bengaluru":"아시아","India|Mumbai":"아시아","India|New Delhi":"아시아","Indonesia|Jakarta":"아시아","Iran|Teheran":"중동·아프리카","Italy|Milano":"유럽·유라시아","Japan|Chiba":"일본","Japan|Fukuoka":"일본","Japan|Hiroshima":"일본","Japan|Kumamoto":"일본","Japan|Nagoya":"일본","Japan|Osaka":"일본","Japan|Saitama":"일본","Japan|Sapporo":"일본","Japan|Tokyo":"일본","Japan|Yokohama":"일본","Kazakhstan|Almaty":"유럽·유라시아","Kenya|Nairobi":"중동·아프리카","Kuwait|Kuwait":"중동·아프리카","Kyrgyzstan|Bishkek":"유럽·유라시아","Laos|Vientiane":"아시아","Madagascar|Antananarivo":"중동·아프리카","Malawi|Lilongwe":"중동·아프리카","Malaysia|Kuala Lumpur":"아시아","Mexico|Mexico City":"중남미","Mexico|Monterrey":"중남미","Mongolia|Ulaanbaatar":"아시아","Morocco|Casablanca":"중동·아프리카","Myanmar|Yangon":"아시아","Nepal|Kathmandu":"아시아","Netherlands|Amsterdam":"유럽·유라시아","New Zealand|Auckland":"대양주","New Zealand|Christchurch":"대양주","Nigeria|Lagos":"중동·아프리카","Norway|Oslo":"유럽·유라시아","Oman|Muscat":"중동·아프리카","Panama|Panama City":"중남미","Paraguay|Asuncion":"중남미","Paraguay|Ciudad del Este":"중남미","Peru|Lima":"중남미","Philippines|Manila":"아시아","Poland|Warsaw":"유럽·유라시아","Costa Rica|San Jose":"중남미","Romania|Bucharest":"유럽·유라시아","Russia|Moscow":"유럽·유라시아","Russia|Saint Petersburg":"유럽·유라시아","Russia|Vladivostok":"유럽·유라시아","Saudi Arabia|Jeddah":"중동·아프리카","Saudi Arabia|Riyadh":"중동·아프리카","Singapore|Singapore":"아시아","Slovakia|Bratislava":"유럽·유라시아","South Africa|Cape Town":"중동·아프리카","South Africa|Johannesburg":"중동·아프리카","Spain|Barcelona":"유럽·유라시아","Spain|Madrid":"유럽·유라시아","Sri Lanka|Colombo":"아시아","Sweden|Stockholm":"유럽·유라시아","Switzerland|Zurich":"유럽·유라시아","Taiwan|Taipei":"아시아","Tajikistan|Dushanbe":"유럽·유라시아","Tanzania|Dar es Salaam":"중동·아프리카","Thailand|Bangkok":"아시아","Turkiye|Istanbul":"유럽·유라시아","UK|London":"유럽·유라시아","USA|Atlanta":"북미주동부","USA|Boston":"북미주동부","USA|Chicago":"북미주동부","USA|Dallas":"북미주동부","USA|Denver":"북미주서부","USA|Detroit":"북미주동부","USA|Fort Lee":"북미주동부","USA|Guam":"아시아","USA|Houston":"북미주동부","USA|Los Angeles":"북미주서부","USA|Las Vegas":"북미주서부","USA|Miami":"북미주동부","USA|New Jersey":"북미주동부","USA|New York":"북미주동부","USA|Raleigh":"북미주동부","USA|San Francisco":"북미주서부","USA|San Diego":"북미주서부","USA|San Juan":"북미주동부","USA|Savannah":"북미주동부","USA|Seattle":"북미주서부","USA|Tampa":"북미주동부","USA|Washington D.C.":"북미주동부","Ukraine|Kyiv":"유럽·유라시아","Uruguay|Montevideo":"중남미","Uzbekistan|Tashkent":"유럽·유라시아","Vietnam|Hanoi":"아시아","Vietnam|Ho Chi Minh":"아시아"},"countryIso":{"USA":"us","UK":"gb","Canada":"ca","Mexico":"mx","Argentina":"ar","Brazil":"br","Chile":"cl","Colombia":"co","Ecuador":"ec","Panama":"pa","Paraguay":"py","Peru":"pe","Uruguay":"uy","Venezuela":"ve","Dominican Republic":"do","Costa Rica":"cr","Australia":"au","New Zealand":"nz","China":"cn","Japan":"jp","Korea":"kr","Hong Kong":"hk","Taiwan":"tw","Singapore":"sg","Malaysia":"my","Indonesia":"id","Philippines":"ph","Thailand":"th","Vietnam":"vn","Cambodia":"kh","Laos":"la","Myanmar":"mm","India":"in","Bangladesh":"bd","Nepal":"np","Sri Lanka":"lk","Mongolia":"mn","Austria":"at","Belgium":"be","Bulgaria":"bg","Czech Republic":"cz","Denmark":"dk","Finland":"fi","France":"fr","Germany":"de","Hungary":"hu","Italy":"it","Netherlands":"nl","Norway":"no","Poland":"pl","Romania":"ro","Russia":"ru","Slovakia":"sk","Spain":"es","Sweden":"se","Switzerland":"ch","Ukraine":"ua","Turkiye":"tr","Albania":"al","Kazakhstan":"kz","Kyrgyzstan":"kg","Tajikistan":"tj","Uzbekistan":"uz","Georgia":"ge","United Arab Emirates":"ae","Bahrain":"bh","Egypt":"eg","Iran":"ir","Kuwait":"kw","Oman":"om","Saudi Arabia":"sa","Algeria":"dz","Botswana":"bw","Ghana":"gh","Kenya":"ke","Madagascar":"mg","Malawi":"mw","Morocco":"ma","Nigeria":"ng","South Africa":"za","Tanzania":"tz"},"categoryKeywords":{"리빙 & 뷰티":["화장용품","미용용품","비누","삼푸","샴푸","위생용품","주방용품","가구","인테리어","가정용섬유제품","문구류","선물","공예품","애완동물용품","애완동물식품","아기","출판","보석","악기","도자기","목제품","예술용품","가죽","문화상품"],"식음료, 요식업":["요식업","가공","건조","냉동식품","식자재","음료","해산물","제과","곡물","농업제품","프렌차이즈","커피","차","주류","과자","육류","가축","수산물"],"전기, 전자":["전자제품","전자부품","통신장치","컴퓨터","가전","반도체","디스플레이","배터리","주변장치","전자사전","산업용전기","광학","히터","가정용기"],"화학, 자원":["화학","고무","플라스틱","강철","금속","석유","자원","원자재","섬유원료","광물","광석","종이","포장재","펄프"],"건축, 재활용":["건축","건축자재","건설자재","설계","친환경","재활용","폐기물","환경","건설"],"호텔, 여행":["호텔","관광","여행","관광서비스"],"건강식품, 미용용품":["건강식품","의료용구","의약완제품","의약품","건강","보건","뷰티","피부","헤어","안경"],"금융, 법률, 부동산":["부동산금융","부동산","법률","은행","보험","투자","회계","금융","세무","컨설팅","자문","증권","법무"],"섬유, 섬유제품":["의류","직물","가방","신발","액세서리","가발","패션","원단","봉제","모자","양말"],"물류":["물류","운송","창고","중계","임대","해운","항공물류","택배","선박","포워딩"],"전자상거래":["전자상거래","통신판매","이커머스","쇼핑몰","온라인"],"교육, 문화, 리크루팅":["교육","문화","광고","출판","인력","채용","학원","미디어"],"기계, 공구":["기계류","자동차부품","자동차","공구","설비","장비","부품","로봇"],"4차산업, 컨텐츠, 플랫폼":["IT","소프트웨어","개발","플랫폼","컨텐츠","콘텐츠","인공지능","AI","블록체인","게임","앱","스포츠용품","스포츠"],"기업회의, 포상관광, 컨벤션, 전시":["컨벤션","전시","이벤트","회의","포상관광","MICE","박람회"]},"countryAliases":{"U.S.A.":"USA","USA":"USA","U.K":"UK","UK":"UK","CZECH REP":"Czech Republic","CZECH Rep":"Czech Republic","ITALIA":"Italy","ARAB EMIRATE":"United Arab Emirates","REPUBLIC OF COSTA RICA":"Costa Rica","KOREA":"Korea","SOUTH AFRICA":"South Africa","NEW ZEALAND":"New Zealand","HONG KONG":"Hong Kong","SAUDI ARABIA":"Saudi Arabia","SRI LANKA":"Sri Lanka","DOMINICAN REPUBLIC":"Dominican Republic"},"cityAliases":{"L.A":"Los Angeles","S.F":"San Francisco","Las vegas":"Las Vegas","San juan":"San Juan","Washington D.C":"Washington D.C.","Hong Kong":"Hong Kong/Macau","Hong kong macau":"Hong Kong/Macau","PhnomPenh":"Phnom Penh","Fortlee":"Fort Lee","FortLee":"Fort Lee","CapeTown":"Cape Town","SaintPetersburg":"Saint Petersburg","Ciudad Del Este":"Ciudad del Este","Xian":"Xi'an","Dar es salaam":"Dar es Salaam","MonteVideo":"Montevideo"}};
+
+// Google Apps Script Web App URL
+// 배포 후 받은 URL을 여기에 붙여넣기 (배포 → 새 배포 → 웹 앱 → URL)
+// 예: https://script.google.com/macros/s/AKfycbx.../exec
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwyJjot4wYgjNkZ61hfmeoQX3PkLYTXcqhznmE7lyaofkQWwVJiMsRkfRoeBI6Z6Amjow/exec";
+
+// 또는 URL 파라미터로 전달 가능: ?gas=https://script.google.com/...
+const urlParams = new URLSearchParams(window.location.search);
+const ACTIVE_GAS_URL = urlParams.get('gas') || GAS_URL;
+
+// ============================================================
+// 정규화 함수
+// ============================================================
+function norm(s) {
+  return String(s || '').toLowerCase().replace(/[\s./'-]/g, '');
+}
+
+function normCountry(c) {
+  if (!c) return '';
+  const s = String(c).trim();
+  return META.countryAliases[s] || (s === s.toUpperCase() ? s.charAt(0) + s.slice(1).toLowerCase() : s);
+}
+
+function normCity(c) {
+  if (!c) return '';
+  const s = String(c).trim();
+  return META.cityAliases[s] || s;
+}
+
+function getRegion(country, city) {
+  let region = META.countryRegion[country] || '';
+  if (country === 'USA') {
+    const east = ['New York','New Jersey','Atlanta','Boston','Chicago','Dallas','Detroit','Houston','Washington D.C.','Miami','Savannah','Fort Lee','Tampa','San Juan','Raleigh','Fairfax'];
+    const west = ['Los Angeles','San Francisco','Seattle','San Diego','Denver','Las Vegas'];
+    if (east.includes(city)) return '북미주동부';
+    if (west.includes(city)) return '북미주서부';
+    if (city === 'Guam') return '아시아';
+    return '북미주동부';
+  }
+  if (country === 'Canada') {
+    const east = ['Toronto','Windsor','Montreal'];
+    return east.includes(city) ? '북미주동부' : '북미주서부';
+  }
+  return region;
+}
+
+function getCoord(country, city) {
+  if (META.cityCoords[country] && META.cityCoords[country][city]) {
+    return META.cityCoords[country][city];
+  }
+  return null;
+}
+
+// ============================================================
+// 업종 → 카테고리 자동 분류
+// ============================================================
+function categorize(industry) {
+  if (!industry) return null;
+  const text = String(industry);
+  const matched = [];
+  
+  if (text.includes('종합무역')) matched.push('종합무역');
+  
+  for (const [cat, keywords] of Object.entries(META.categoryKeywords)) {
+    for (const kw of keywords) {
+      if (text.includes(kw)) {
+        if (!matched.includes(cat)) matched.push(cat);
+        break;
+      }
+    }
+  }
+  
+  if (matched.length === 0) {
+    if (text.includes('서비스')) return '서비스업';
+    return '기타';
+  }
+  return matched.join(' / ');
+}
+
+function primaryCategory(cat) {
+  if (!cat) return null;
+  const parts = cat.split(' / ');
+  for (const p of parts) {
+    if (p !== '종합무역') return p;
+  }
+  return parts[0];
+}
+
+// 특별위원장 번호 제거
+function cleanPosition(pos) {
+  if (!pos) return '';
+  return String(pos).replace(/(\d+)\.\s*/g, '').trim();
+}
+
+// ============================================================
+// CSV 파싱
+// ============================================================
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let cur = '';
+  let inQuote = false;
+  
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuote) {
+      if (ch === '"') {
+        if (text[i+1] === '"') { cur += '"'; i++; }
+        else { inQuote = false; }
+      } else {
+        cur += ch;
+      }
+    } else {
+      if (ch === '"') inQuote = true;
+      else if (ch === ',') { row.push(cur); cur = ''; }
+      else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && text[i+1] === '\n') i++;
+        row.push(cur); cur = '';
+        if (row.length > 1 || row[0]) rows.push(row);
+        row = [];
+      } else cur += ch;
+    }
+  }
+  if (cur || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+
+// ============================================================
+// 시트 데이터 → 지회 그룹화
+// ============================================================
+function buildChaptersFromSheet(rows) {
+  if (rows.length < 2) throw new Error('시트가 비어있음');
+  
+  const headers = rows[0].map(h => h.trim());
+  const idx = {
+    no: headers.indexOf('번호'),
+    country: headers.indexOf('국가'),
+    region: headers.indexOf('권역'),
+    chapter: headers.indexOf('지회'),
+    name: headers.indexOf('성명'),
+    position: headers.indexOf('23대 임원 직책'),
+    president: headers.indexOf('지회장'),
+    honorary: headers.indexOf('명예회장'),
+    director: headers.indexOf('상임이사여부'),
+    industry: headers.indexOf('업종'),
+    company: headers.indexOf('회사명'),
+    email: headers.indexOf('이메일'),
+  };
+  
+  document.getElementById('loadingSub').textContent = `${rows.length - 1}개 행 처리 중...`;
+  
+  // 공식 지회 미리 등록 (회원 0명이어도 표시)
+  const chapters = [];
+  const chapterMap = new Map();
+  
+  for (const key of META.officialChapters) {
+    const [country, city] = key.split('|');
+    const coord = getCoord(country, city);
+    if (!coord) continue;
+    const region = META.officialRegions[key] || getRegion(country, city);
+    const ch = {
+      country, city, region,
+      lat: coord[0], lng: coord[1],
+      iso: META.countryIso[country] || '',
+      official: true, members: [], president: null,
+    };
+    chapters.push(ch);
+    chapterMap.set(`${norm(country)}|${norm(city)}`, ch);
+  }
+  
+  // 회원 추가
+  const chaptersWithPresident = new Set();
+  
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length < 5) continue;
+    
+    const rawCountry = row[idx.country] || '';
+    const rawCity = row[idx.chapter] || '';
+    const country = normCountry(rawCountry);
+    const city = normCity(rawCity);
+    
+    if (!country || !city || country === 'Korea' || city === '기타') continue;
+    
+    const key = `${norm(country)}|${norm(city)}`;
+    let ch = chapterMap.get(key);
+    
+    // 비공식 지회
+    if (!ch) {
+      const coord = getCoord(country, city);
+      if (!coord) continue;
+      const region = getRegion(country, city);
+      ch = {
+        country, city, region,
+        lat: coord[0], lng: coord[1],
+        iso: META.countryIso[country] || '',
+        official: false, members: [], president: null,
+      };
+      chapters.push(ch);
+      chapterMap.set(key, ch);
+    }
+    
+    // 카테고리 자동 분류
+    const industry = (row[idx.industry] || '').trim();
+    const categoryFull = categorize(industry);
+    const category = primaryCategory(categoryFull);
+    
+    const presidentVal = (row[idx.president] || '').trim();
+    const member = {
+      name: (row[idx.name] || '').trim(),
+      company: (row[idx.company] || '').trim(),
+      industry: industry,
+      category: category || '',
+      isDirector: (row[idx.director] || '').trim() === 'Y',
+      position: cleanPosition(row[idx.position] || ''),
+      honorary: (row[idx.honorary] || '').trim(),
+      role: presidentVal === '지회장' ? '지회장' : '',
+      email: (row[idx.email] || '').trim(),
+    };
+    
+    if (presidentVal === '지회장') {
+      ch.president = member.name;
+      chaptersWithPresident.add(key);
+    } else if (presidentVal === '공석' && !ch.president) {
+      ch.president = '공석';
+    }
+    
+    ch.members.push(member);
+  }
+  
+  // 공석 마킹
+  for (const ch of chapters) {
+    if (ch.official && !ch.president) ch.president = '공석';
+  }
+  
+  return chapters;
+}
+
+// ============================================================
+// 메인 데이터 로드
+// ============================================================
+async function loadDataFromSheet() {
+  document.getElementById('loadingSub').textContent = 'Google Apps Script API 호출 중...';
+  
+  if (!ACTIVE_GAS_URL || ACTIVE_GAS_URL === 'YOUR_GAS_URL_HERE') {
+    throw new Error('Apps Script URL이 설정되지 않았습니다.
+
+HTML 파일의 GAS_URL 변수에 배포된 웹 앱 URL을 입력해주세요.
+
+또는 URL 파라미터로 전달 가능: ?gas=https://script.google.com/...');
+  }
+  
+  const url = ACTIVE_GAS_URL + (ACTIVE_GAS_URL.includes('?') ? '&' : '?') + '_=' + Date.now();
+  
+  let response;
+  try {
+    response = await fetch(url, { 
+      cache: 'no-store',
+      redirect: 'follow',
+    });
+  } catch (e) {
+    throw new Error('네트워크 오류: ' + e.message + '
+
+Apps Script가 "모든 사용자" 액세스로 배포되었는지 확인해주세요.');
+  }
+  
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: Apps Script 응답 오류`);
+  }
+  
+  document.getElementById('loadingSub').textContent = 'JSON 파싱 중...';
+  const result = await response.json();
+  
+  if (!result.success) {
+    throw new Error(result.error || 'Apps Script 응답 오류');
+  }
+  
+  // 시트 마지막 업데이트 시간 저장
+  if (result.lastUpdate) {
+    window._sheetLastUpdate = new Date(result.lastUpdate);
+  }
+  
+  document.getElementById('loadingSub').textContent = `${result.totalRows}명 회원 처리 중...`;
+  
+  // GAS는 객체 배열을 반환, buildChaptersFromSheet는 2D array(rows)를 받음
+  // 객체 배열을 rows 형식으로 변환
+  const headers = result.headers;
+  const rows = [headers];
+  for (const m of result.members) {
+    rows.push(headers.map(h => m[h] || ''));
+  }
+  
+  document.getElementById('loadingSub').textContent = '카테고리 분류 및 좌표 매핑 중...';
+  const chapters = buildChaptersFromSheet(rows);
+  
+  // DATA 객체 구성
+  const totalMembers = chapters.reduce((s, c) => s + c.members.length, 0);
+  const totalDirectors = chapters.reduce((s, c) => s + c.members.filter(m => m.isDirector).length, 0);
+  const totalPresidents = chapters.filter(c => c.president && c.president !== '공석').length;
+  const totalVacant = chapters.filter(c => c.president === '공석').length;
+  const totalOfficial = chapters.filter(c => c.official).length;
+  
+  // 권역별 요약
+  const regionSummary = {};
+  for (const r of META.regions) {
+    const rc = chapters.filter(c => c.region === r);
+    if (rc.length === 0) continue;
+    const countries = new Set(rc.filter(c => c.members.length > 0).map(c => c.country));
+    regionSummary[r] = {
+      lat: rc.reduce((s,c)=>s+c.lat,0)/rc.length,
+      lng: rc.reduce((s,c)=>s+c.lng,0)/rc.length,
+      totalChapters: rc.length,
+      officialChapters: rc.filter(c=>c.official).length,
+      totalMembers: rc.reduce((s,c)=>s+c.members.length, 0),
+      totalDirectors: rc.reduce((s,c)=>s+c.members.filter(m=>m.isDirector).length, 0),
+      presidents: rc.filter(c=>c.president && c.president !== '공석').length,
+      vacant: rc.filter(c=>c.president === '공석').length,
+      countries: countries.size,
+    };
+  }
+  
+  // 북미주 통합
+  if (regionSummary['북미주서부'] && regionSummary['북미주동부']) {
+    const w = regionSummary['북미주서부'], e = regionSummary['북미주동부'];
+    regionSummary['북미주'] = {
+      lat: (w.lat + e.lat) / 2,
+      lng: (w.lng + e.lng) / 2,
+      totalChapters: w.totalChapters + e.totalChapters,
+      officialChapters: w.officialChapters + e.officialChapters,
+      totalMembers: w.totalMembers + e.totalMembers,
+      totalDirectors: w.totalDirectors + e.totalDirectors,
+      presidents: w.presidents + e.presidents,
+      vacant: w.vacant + e.vacant,
+      countries: 2,
+    };
+  }
+  
+  return {
+    chapters, regionSummary,
+    totalMembers, totalChapters: chapters.length, totalOfficial,
+    totalDirectors, totalPresidents, totalVacant,
+  };
+}
+
+// ============================================================
+// === 이하 렌더링 코드 (이전과 동일) ===
+// ============================================================
+let DATA = null;
+const RC = META.regionColors;
+const state = { view: 'region', selectedRegion: null, search: '', category: null, status: null };
+
+function isoToFlag(iso) {
+  if (!iso || iso.length !== 2) return '';
+  const codePoints = iso.toLowerCase().split('').map(c => 0x1F1E6 + c.charCodeAt(0) - 'a'.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+}
+
+const map = L.map('map', { worldCopyJump: true, minZoom: 2, maxZoom: 16 }).setView([20, 30], 2);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(map);
+const markerLayer = L.layerGroup().addTo(map);
+
+function getRoleTags(member) {
+  const tags = [];
+  if (member.role === '지회장') tags.push({label: '지회장', cls: 'role-pres'});
+  if (member.honorary) tags.push({label: '명예회장 ' + member.honorary, cls: 'role-honor'});
+  if (member.position) {
+    const parts = member.position.split(' / ');
+    parts.forEach(p => {
+      p = p.trim();
+      if (!p) return;
+      if (p.startsWith('이사장단(')) tags.push({label: p, cls: 'role-board'});
+      else if (p.startsWith('상임집행부(')) tags.push({label: p, cls: 'role-exec'});
+      else if (p === '감사') tags.push({label: '감사', cls: 'role-audit'});
+      else if (/^\d+통상위원장/.test(p)) tags.push({label: p, cls: 'role-trade'});
+      else if (p.includes('위원장') || p.includes('단장')) tags.push({label: p, cls: 'role-special'});
+      else tags.push({label: p, cls: 'role-special'});
+    });
+  }
+  return tags;
+}
+
+function sortMembers(members) {
+  return [...members].sort((a, b) => {
+    const aP = a.role === '지회장' ? 0 : 1;
+    const bP = b.role === '지회장' ? 0 : 1;
+    if (aP !== bP) return aP - bP;
+    const aR = (a.position || a.honorary || a.isDirector) ? 0 : 1;
+    const bR = (b.position || b.honorary || b.isDirector) ? 0 : 1;
+    if (aR !== bR) return aR - bR;
+    return a.name.localeCompare(b.name, 'ko');
+  });
+}
+
+function buildFilters() {
+  const cf = document.getElementById('categoryFilter');
+  cf.innerHTML = '';
+  const allCat = document.createElement('div');
+  allCat.className = 'filter-chip active'; allCat.dataset.value = ''; allCat.textContent = '전체';
+  allCat.onclick = () => { state.category = null; updateChips('category'); render(); };
+  cf.appendChild(allCat);
+  META.categories.forEach(cat => {
+    const color = META.categoryColors[cat] || '#94a3b8';
+    let cnt = 0;
+    DATA.chapters.forEach(c => { cnt += c.members.filter(m => m.category === cat).length; });
+    if (cnt === 0) return;
+    const chip = document.createElement('div');
+    chip.className = 'filter-chip'; chip.dataset.value = cat;
+    chip.innerHTML = `<span class="dot" style="background:${color}"></span>${cat} <span class="cnt">${cnt}</span>`;
+    chip.onclick = () => { state.category = state.category === cat ? null : cat; updateChips('category'); render(); };
+    cf.appendChild(chip);
+  });
+  
+  const sf = document.getElementById('statusFilter');
+  sf.innerHTML = '';
+  const statuses = [
+    {v: '', label: '전체'},
+    {v: 'has-pres', label: '지회장 있음', cnt: DATA.totalPresidents},
+    {v: 'vacant', label: '지회장 공석', cnt: DATA.totalVacant},
+    {v: 'unofficial', label: '공식지회 외', cnt: DATA.totalChapters - DATA.totalOfficial},
+  ];
+  statuses.forEach(s => {
+    const chip = document.createElement('div');
+    chip.className = 'filter-chip' + (s.v === '' ? ' active' : ''); chip.dataset.value = s.v;
+    chip.innerHTML = s.label + (s.cnt !== undefined ? ` <span class="cnt">${s.cnt}</span>` : '');
+    chip.onclick = () => { state.status = s.v === '' ? null : (state.status === s.v ? null : s.v); updateChips('status'); render(); };
+    sf.appendChild(chip);
+  });
+  
+  const lg = document.getElementById('legendItems');
+  lg.innerHTML = '';
+  const legendRegions = META.displayRegions || META.regions;
+  legendRegions.forEach(r => {
+    const summary = DATA.regionSummary[r];
+    if (!summary) return;
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<span class="legend-dot" style="background:${RC[r]}"></span><span>${r} (${summary.totalMembers})</span>`;
+    item.onclick = () => {
+      if (r === '북미주') {
+        state.view = 'chapter';
+        state.selectedRegion = '북미주';
+        document.querySelectorAll('.view-toggle button').forEach(b => b.classList.toggle('active', b.dataset.view === 'chapter'));
+        map.setView([40, -98], 3, {animate: true});
+        render();
+      } else { zoomToRegion(r); }
+    };
+    lg.appendChild(item);
+  });
+}
+
+function updateChips(group) {
+  const map_ = {category: 'categoryFilter', status: 'statusFilter'};
+  const container = document.getElementById(map_[group]);
+  const current = state[group];
+  container.querySelectorAll('.filter-chip').forEach(chip => {
+    const v = chip.dataset.value;
+    chip.classList.toggle('active', (current === null && v === '') || current === v);
+  });
+}
+
+document.querySelectorAll('.filter-header').forEach(h => {
+  h.onclick = (e) => {
+    if (e.target.classList.contains('filter-chip')) return;
+    const target = document.getElementById(h.dataset.target);
+    h.classList.toggle('collapsed'); target.classList.toggle('collapsed');
+  };
+});
+
+document.querySelectorAll('.view-toggle button').forEach(btn => {
+  btn.onclick = () => {
+    state.view = btn.dataset.view; state.selectedRegion = null;
+    document.querySelectorAll('.view-toggle button').forEach(b => b.classList.toggle('active', b === btn));
+    if (state.view === 'region') map.setView([20, 30], 2, {animate: true});
+    render();
+  };
+});
+
+function renderRegionView() {
+  markerLayer.clearLayers();
+  const displayRegions = META.displayRegions || META.regions;
+  displayRegions.forEach(r => {
+    let memberCount = 0, chapterCount = 0, presCount = 0, vacantCount = 0;
+    const countries = new Set();
+    const subRegions = (r === '북미주') ? ['북미주서부','북미주동부'] : [r];
+    DATA.chapters.forEach(c => {
+      if (!subRegions.includes(c.region)) return;
+      const cnt = getFilteredMemberCount(c);
+      if (cnt === 0 && (state.category || state.search)) return;
+      if (state.status === 'has-pres' && (!c.president || c.president === '공석')) return;
+      if (state.status === 'vacant' && c.president !== '공석') return;
+      if (state.status === 'unofficial' && c.official) return;
+      memberCount += cnt; chapterCount += 1;
+      if (c.president && c.president !== '공석') presCount++;
+      if (c.president === '공석') vacantCount++;
+      if (cnt > 0) countries.add(c.country);
+    });
+    if (memberCount === 0 && state.category) return;
+    const view = META.regionViews[r];
+    const lat = view ? view.lat : DATA.regionSummary[r].lat;
+    const lng = view ? view.lng : DATA.regionSummary[r].lng;
+    const size = Math.min(70 + Math.sqrt(memberCount) * 2.5, 130);
+    const color = RC[r] || '#d62828';
+    const html = `<div class="map-marker region" style="width:${size}px;height:${size}px;background:${color}">
+      <div class="r-name">${escapeHTML(r)}</div>
+      <div class="r-chap">${chapterCount}개 지회</div>
+      <div class="r-mem">${memberCount.toLocaleString()}</div>
+    </div>`;
+    const marker = L.marker([lat, lng], {
+      icon: L.divIcon({className: 'custom-marker', html: html, iconSize: [size, size], iconAnchor: [size/2, size/2]})
+    }).addTo(markerLayer);
+    marker.bindPopup(buildRegionPopup(r, {memberCount, chapterCount, presCount, vacantCount, countries: countries.size}), {maxWidth: 380});
+  });
+}
+
+function buildRegionPopup(r, stats) {
+  const color = RC[r];
+  const catDist = {};
+  const subRegions = (r === '북미주') ? ['북미주서부','북미주동부'] : [r];
+  DATA.chapters.forEach(c => {
+    if (!subRegions.includes(c.region)) return;
+    c.members.forEach(m => { if (m.category) catDist[m.category] = (catDist[m.category] || 0) + 1; });
+  });
+  const topCats = Object.entries(catDist).sort((a,b) => b[1]-a[1]).slice(0, 6);
+  let html = `<div class="popup-content">
+    <div class="popup-header" style="background:${color}">
+      <h3>${escapeHTML(r)}</h3>
+      <div class="sub">${stats.chapterCount}개 지회 · ${stats.countries}개 활동국가 · DB등록회원 ${stats.memberCount.toLocaleString()}명</div>
+    </div>
+    <div class="popup-body">
+      <div class="popup-stats-grid">
+        <div class="popup-stat"><div class="num">${stats.memberCount.toLocaleString()}</div><div class="lbl">DB등록회원</div></div>
+        <div class="popup-stat"><div class="num">${stats.chapterCount}</div><div class="lbl">지회 수</div></div>
+        <div class="popup-stat"><div class="num">${stats.countries}</div><div class="lbl">활동국가</div></div>
+        <div class="popup-stat"><div class="num">${stats.presCount}</div><div class="lbl">지회장</div></div>
+      </div>`;
+  if (stats.vacantCount > 0) {
+    html += `<div class="popup-info-row"><span class="lbl">지회장 공석</span><span class="val" style="color:#dc2626">${stats.vacantCount}개 지회</span></div>`;
+  }
+  if (topCats.length > 0) {
+    html += `<div class="popup-section-title">주요 업종</div><div class="popup-cat-bar">`;
+    topCats.forEach(([cat, cnt]) => {
+      const ccolor = META.categoryColors[cat] || '#94a3b8';
+      html += `<span class="popup-cat-tag" style="background:${ccolor}">${escapeHTML(cat)} ${cnt}</span>`;
+    });
+    html += `</div>`;
+  }
+  if (r === '북미주') {
+    html += `<div style="display:flex;gap:6px;margin-top:10px">
+      <button class="popup-action" style="margin:0;background:#3b82f6" onclick="window._zoomTo('북미주서부')">→ 북미주서부</button>
+      <button class="popup-action" style="margin:0;background:#1e40af" onclick="window._zoomTo('북미주동부')">→ 북미주동부</button>
+    </div>`;
+  } else {
+    html += `<button class="popup-action" onclick="window._zoomTo('${escapeHTML(r)}')">→ ${escapeHTML(r)} 지회 보기</button>`;
+  }
+  html += `</div></div>`;
+  return html;
+}
+
+window._zoomTo = function(r) { zoomToRegion(r); };
+
+function zoomToRegion(r) {
+  state.view = 'chapter'; state.selectedRegion = r;
+  document.querySelectorAll('.view-toggle button').forEach(b => b.classList.toggle('active', b.dataset.view === 'chapter'));
+  const v = META.regionViews[r];
+  if (v) map.setView([v.lat, v.lng], v.zoom, {animate: true, duration: 0.6});
+  render();
+}
+
+function renderChapterView() {
+  markerLayer.clearLayers();
+  const filtered = getFilteredChapters();
+  filtered.forEach(c => {
+    const cnt = getFilteredMemberCount(c);
+    if (cnt === 0 && state.category) return;
+    let cls = 'chapter';
+    let bg = RC[c.region] || '#d62828';
+    if (c.president === '공석') { cls += ' vacant'; bg = '#94a3b8'; }
+    else if (!c.official) { cls += ' unofficial'; bg = '#fbbf24'; }
+    const size = Math.min(22 + Math.sqrt(cnt) * 3, 56);
+    const html = `<div class="map-marker ${cls}" style="width:${size}px;height:${size}px;background:${bg};font-size:${cnt >= 100 ? 11 : 12}px">${cnt}</div>`;
+    const marker = L.marker([c.lat, c.lng], {
+      icon: L.divIcon({className: 'custom-marker', html: html, iconSize: [size, size], iconAnchor: [size/2, size/2]})
+    }).addTo(markerLayer);
+    marker.bindPopup(buildChapterPopup(c), {maxWidth: 400, autoPan: true});
+  });
+}
+
+function buildChapterPopup(c) {
+  const filteredMembers = state.category ? c.members.filter(m => m.category === state.category) : c.members;
+  const sorted = sortMembers(filteredMembers);
+  const catDist = {};
+  c.members.forEach(m => { if (m.category) catDist[m.category] = (catDist[m.category] || 0) + 1; });
+  let bg = RC[c.region] || '#d62828';
+  let statusText = '';
+  if (c.president === '공석') { bg = '#94a3b8'; statusText = '지회장 공석'; }
+  else if (!c.official) { bg = '#f59e0b'; statusText = '공식지회 외'; }
+  else { statusText = `지회장: ${c.president}`; }
+  const chapterFlag = isoToFlag(c.iso);
+  let html = `<div class="popup-content">
+    <div class="popup-header" style="background:${bg}">
+      <h3>${chapterFlag ? chapterFlag + ' ' : ''}${escapeHTML(c.city)}</h3>
+      <div class="sub">${escapeHTML(c.country)} · ${escapeHTML(c.region)} · ${statusText}</div>
+    </div>
+    <div class="popup-body">
+      <div class="popup-info-row"><span class="lbl">DB등록회원</span><span class="val">${c.members.length}명</span></div>`;
+  if (state.category) {
+    html += `<div class="popup-info-row"><span class="lbl">${escapeHTML(state.category)}</span><span class="val">${filteredMembers.length}명</span></div>`;
+  }
+  if (Object.keys(catDist).length > 0) {
+    html += `<div class="popup-section-title">업종 카테고리 분포</div><div class="popup-cat-bar">`;
+    Object.entries(catDist).sort((a,b) => b[1]-a[1]).slice(0, 8).forEach(([cat, cnt]) => {
+      const color = META.categoryColors[cat] || '#94a3b8';
+      html += `<span class="popup-cat-tag" style="background:${color}">${escapeHTML(cat)} ${cnt}</span>`;
+    });
+    html += `</div>`;
+  }
+  if (sorted.length > 0) {
+    html += `<div class="popup-section-title">DB등록회원 ${sorted.length}명 ${state.category ? '(필터링됨)' : ''}</div>`;
+    const flag = isoToFlag(c.iso);
+    sorted.forEach(m => {
+      const tags = getRoleTags(m);
+      const hasRole = tags.length > 0;
+      html += `<div class="popup-member ${hasRole ? 'has-role' : ''}">`;
+      html += `<div class="m-line1">`;
+      if (flag) html += `<span class="m-flag" title="${escapeHTML(c.country)}">${flag}</span>`;
+      html += `<span class="m-name">${escapeHTML(m.name)}</span>`;
+      tags.forEach(t => { html += `<span class="role-tag ${t.cls}">${escapeHTML(t.label)}</span>`; });
+      html += `</div>`;
+      if (m.company) html += `<div class="m-company">🏢 ${escapeHTML(m.company)}</div>`;
+      if (m.industry) html += `<div class="m-industry">${escapeHTML(m.industry)}</div>`;
+      if (m.category && m.category !== '기타' && m.category !== '서비스업') {
+        const catColor = META.categoryColors[m.category] || '#94a3b8';
+        const committee = META.categoryToCommittee[m.category];
+        html += `<div class="m-cat-line">`;
+        html += `<span class="m-cat-tag" style="background:${catColor}">${escapeHTML(m.category)}</span>`;
+        if (committee) html += `<span class="m-recommend">💡 추천: ${escapeHTML(committee.name)}</span>`;
+        html += `</div>`;
+      }
+      if (m.email) html += `<div class="m-email">✉ <a href="mailto:${escapeHTML(m.email)}">${escapeHTML(m.email)}</a></div>`;
+      html += `</div>`;
+    });
+  }
+  html += `</div></div>`;
+  return html;
+}
+
+function getFilteredChapters() {
+  return DATA.chapters.filter(c => {
+    if (state.selectedRegion === '북미주') {
+      if (c.region !== '북미주서부' && c.region !== '북미주동부') return false;
+    } else if (state.selectedRegion && c.region !== state.selectedRegion) return false;
+    if (state.status === 'has-pres' && (!c.president || c.president === '공석')) return false;
+    if (state.status === 'vacant' && c.president !== '공석') return false;
+    if (state.status === 'unofficial' && c.official) return false;
+    if (state.category) {
+      if (!c.members.some(m => m.category === state.category)) return false;
+    }
+    if (state.search) {
+      const q = state.search.toLowerCase();
+      const inName = c.city.toLowerCase().includes(q) || c.country.toLowerCase().includes(q);
+      const inMember = c.members.some(m => 
+        m.name.toLowerCase().includes(q) ||
+        (m.company && m.company.toLowerCase().includes(q)) ||
+        (m.email && m.email.toLowerCase().includes(q)));
+      if (!inName && !inMember) return false;
+    }
+    return true;
+  });
+}
+
+function getFilteredMemberCount(chapter) {
+  if (!state.category) return chapter.members.length;
+  return chapter.members.filter(m => m.category === state.category).length;
+}
+
+function renderList() {
+  const list = document.getElementById('resultsList');
+  const header = document.getElementById('resultsHeader');
+  list.innerHTML = '';
+  if (state.view === 'region' && !state.selectedRegion) {
+    const displayRegions = META.displayRegions || META.regions;
+    header.textContent = `${displayRegions.length}개 권역`;
+    displayRegions.forEach(r => {
+      const s = DATA.regionSummary[r]; if (!s) return;
+      const item = document.createElement('div');
+      item.className = 'item';
+      const subText = r === '북미주' && DATA.regionSummary['북미주서부'] && DATA.regionSummary['북미주동부']
+        ? `${s.totalChapters}개 지회 · 서부 ${DATA.regionSummary['북미주서부'].totalMembers}명 + 동부 ${DATA.regionSummary['북미주동부'].totalMembers}명`
+        : `${s.totalChapters}개 지회 · ${s.countries || 0}개 국가 · 지회장 ${s.presidents}명${s.vacant > 0 ? ` · 공석 ${s.vacant}` : ''}`;
+      item.innerHTML = `
+        <div class="it-title">
+          <span><span style="display:inline-block;background:${RC[r]};width:10px;height:10px;border-radius:50%;vertical-align:middle;margin-right:6px"></span>${escapeHTML(r)}</span>
+          <span class="badge badge-mem">${s.totalMembers.toLocaleString()}명</span>
+        </div>
+        <div class="it-sub">${subText}</div>`;
+      item.onclick = () => {
+        if (r === '북미주') {
+          state.view = 'chapter'; state.selectedRegion = '북미주';
+          document.querySelectorAll('.view-toggle button').forEach(b => b.classList.toggle('active', b.dataset.view === 'chapter'));
+          map.setView([40, -98], 3, {animate: true});
+          render();
+        } else { zoomToRegion(r); }
+      };
+      list.appendChild(item);
+    });
+  } else {
+    const filtered = getFilteredChapters();
+    const sorted = [...filtered].sort((a,b) => getFilteredMemberCount(b) - getFilteredMemberCount(a));
+    header.innerHTML = state.selectedRegion 
+      ? `<a style="color:var(--red);cursor:pointer;font-weight:600" onclick="window._goRegionView()">← 권역 보기</a> · ${state.selectedRegion} ${filtered.length}개 지회`
+      : `${filtered.length}개 지회 · DB등록회원 ${filtered.reduce((s,c) => s + getFilteredMemberCount(c), 0)}명`;
+    sorted.forEach(c => {
+      const cnt = getFilteredMemberCount(c);
+      if (cnt === 0 && state.category) return;
+      const item = document.createElement('div');
+      item.className = 'item';
+      let badge = '';
+      if (c.president && c.president !== '공석') badge = `<span class="badge badge-pres">${escapeHTML(c.president)}</span>`;
+      else if (c.president === '공석') badge = `<span class="badge badge-vac">공석</span>`;
+      const regionBadge = `<span class="badge badge-region" style="background:${RC[c.region]}">${escapeHTML(c.region)}</span>`;
+      const listFlag = isoToFlag(c.iso);
+      item.innerHTML = `
+        <div class="it-title"><span>${listFlag ? listFlag + ' ' : ''}${escapeHTML(c.city)}</span><span class="badge badge-mem">${cnt}명</span></div>
+        <div class="it-sub">${escapeHTML(c.country)}</div>
+        <div class="it-meta">${regionBadge} ${badge}</div>`;
+      item.onclick = () => {
+        map.setView([c.lat, c.lng], 7, {animate: true});
+        markerLayer.eachLayer(m => {
+          const ll = m.getLatLng();
+          if (Math.abs(ll.lat - c.lat) < 0.001 && Math.abs(ll.lng - c.lng) < 0.001) m.openPopup();
+        });
+      };
+      list.appendChild(item);
+    });
+  }
+}
+
+window._goRegionView = function() {
+  state.view = 'region'; state.selectedRegion = null;
+  document.querySelectorAll('.view-toggle button').forEach(b => b.classList.toggle('active', b.dataset.view === 'region'));
+  map.setView([20, 30], 2, {animate: true});
+  render();
+};
+
+function renderBreadcrumb() {
+  const bc = document.getElementById('breadcrumb');
+  if (state.view === 'chapter' && state.selectedRegion === '북미주') {
+    bc.innerHTML = `<a onclick="window._goRegionView()">전세계</a><span class="sep">›</span><span class="current">북미주 (서부+동부)</span>`;
+    bc.classList.add('show');
+  } else if (state.view === 'chapter' && state.selectedRegion) {
+    bc.innerHTML = `<a onclick="window._goRegionView()">전세계</a><span class="sep">›</span><span class="current">${escapeHTML(state.selectedRegion)}</span>`;
+    bc.classList.add('show');
+  } else if (state.view === 'chapter') {
+    bc.innerHTML = `<a onclick="window._goRegionView()">전세계</a><span class="sep">›</span><span class="current">전체 지회</span>`;
+    bc.classList.add('show');
+  } else { bc.classList.remove('show'); }
+}
+
+function render() {
+  if (!DATA) return;
+  renderBreadcrumb();
+  if (state.view === 'region' && !state.selectedRegion) renderRegionView();
+  else renderChapterView();
+  renderList();
+  const filtered = getFilteredChapters();
+  const totalMembers = filtered.reduce((s,c) => s + getFilteredMemberCount(c), 0);
+  const countries = new Set();
+  filtered.forEach(c => { if (getFilteredMemberCount(c) > 0) countries.add(c.country); });
+  document.getElementById('statMembers').textContent = totalMembers.toLocaleString();
+  document.getElementById('statChapters').textContent = filtered.length;
+  document.getElementById('statCountries').textContent = countries.size;
+  document.getElementById('statPres').textContent = filtered.filter(c => c.president && c.president !== '공석').length;
+}
+
+function escapeHTML(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+let searchTimer;
+document.getElementById('searchInput').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    state.search = e.target.value.trim();
+    if (state.search && state.view === 'region') {
+      state.view = 'chapter';
+      document.querySelectorAll('.view-toggle button').forEach(b => b.classList.toggle('active', b.dataset.view === 'chapter'));
+    }
+    render();
+  }, 200);
+});
+
+document.getElementById('menuBtn').onclick = () => document.getElementById('sidebar').classList.toggle('open');
+
+map.on('zoomend', () => {
+  const z = map.getZoom();
+  if (z >= 4 && state.view === 'region' && !state.selectedRegion) {
+    state.view = 'chapter';
+    document.querySelectorAll('.view-toggle button').forEach(b => b.classList.toggle('active', b.dataset.view === 'chapter'));
+    render();
+  } else if (z <= 2 && state.view === 'chapter' && !state.selectedRegion) {
+    state.view = 'region';
+    document.querySelectorAll('.view-toggle button').forEach(b => b.classList.toggle('active', b.dataset.view === 'region'));
+    render();
+  }
+});
+
+document.getElementById('legendHeader').onclick = () => {
+  document.getElementById('legend').classList.toggle('collapsed');
+};
+if (window.matchMedia('(max-width: 768px)').matches) {
+  document.getElementById('legend').classList.add('collapsed');
+}
+
+// 새로고침 버튼
+document.getElementById('refreshBtn').onclick = async () => {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('loading');
+  try {
+    DATA = await loadDataFromSheet();
+    buildFilters();
+    render();
+    const updateText = window._sheetLastUpdate 
+      ? `시트 동기화: ${window._sheetLastUpdate.toLocaleString('ko-KR')}` 
+      : `시트 동기화: ${new Date().toLocaleTimeString('ko-KR')}`;
+    document.getElementById('lastUpdate').textContent = updateText;
+  } catch (e) {
+    alert('시트 로드 실패: ' + e.message);
+  } finally {
+    btn.classList.remove('loading');
+  }
+};
+
+// === 초기 로드 ===
+(async function init() {
+  try {
+    DATA = await loadDataFromSheet();
+    buildFilters();
+    render();
+    const updateText = window._sheetLastUpdate 
+      ? `시트 동기화: ${window._sheetLastUpdate.toLocaleString('ko-KR')}` 
+      : `시트 동기화: ${new Date().toLocaleString('ko-KR')}`;
+    document.getElementById('lastUpdate').textContent = updateText;
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    setTimeout(() => document.getElementById('loadingOverlay').remove(), 500);
+  } catch (e) {
+    document.getElementById('loadingOverlay').innerHTML = `
+      <div class="error-box" style="max-width:600px;text-align:left">
+        <h3 style="margin-bottom:12px;text-align:center">⚠ 데이터 로드 실패</h3>
+        <p style="font-size:13px;margin-bottom:16px;color:#c33;text-align:center;font-weight:600">${escapeHTML(e.message).replace(/\n/g, '<br>')}</p>
+        
+        <div style="background:#fffbf0;border:1px solid #fbbf24;padding:12px;border-radius:6px;font-size:12px;color:#92400e;margin-bottom:12px">
+          <strong>📋 Apps Script 설정 방법:</strong>
+          <ol style="margin:8px 0 0 20px;line-height:1.8">
+            <li>Google Sheets 열기</li>
+            <li>메뉴: <strong>확장 프로그램 → Apps Script</strong></li>
+            <li>제공된 <strong>옥타_GAS_스크립트.gs</strong> 내용 전체 복사 → 붙여넣기</li>
+            <li>저장 (Ctrl+S)</li>
+            <li>우상단 <strong>[배포] → [새 배포]</strong></li>
+            <li>유형: <strong>웹 앱</strong>, 액세스: <strong>모든 사용자</strong></li>
+            <li>받은 URL을 HTML 파일의 <code>GAS_URL</code>에 입력</li>
+          </ol>
+        </div>
+        
+        <div style="display:flex;gap:8px;justify-content:center">
+          <button onclick="location.reload()" style="padding:8px 16px;background:#d62828;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600">다시 시도</button>
+          <button onclick="(function(){const u=prompt('Apps Script URL 입력:','');if(u){location.href=location.pathname+'?gas='+encodeURIComponent(u);}})()" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600">URL 직접 입력</button>
+        </div>
+      </div>`;
+  }
+})();
+</script>
+</body>
+</html>
