@@ -41,6 +41,25 @@
 <link rel="icon" type="image/png" href="og_image.png">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<!-- 국기 표시용 Twemoji (Windows에서도 컬러 국기 표시) -->
+<style>
+  @font-face {
+    font-family: 'Twemoji Country Flags';
+    unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E0063, U+E0065, U+E0067,
+      U+E006C, U+E006E, U+E0073-E0074, U+E0077, U+E007F;
+    src: url('https://cdn.jsdelivr.net/npm/country-flag-emoji-polyfill@0.1/dist/TwemojiCountryFlags.woff2') format('woff2');
+    font-display: swap;
+  }
+  
+  /* 국기가 표시되는 모든 곳에 폰트 우선순위 적용 */
+  body {
+    font-family: 'Twemoji Country Flags', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
+  }
+  
+  .m-flag, .popup-header h3, .it-title, .legend-item {
+    font-family: 'Twemoji Country Flags', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
+  }
+</style>
 <style>
   :root {
     --red: #d62828;
@@ -61,7 +80,7 @@
     --role-audit: #1f2937;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif; }
+  html, body { height: 100%; overflow: hidden; font-family: 'Twemoji Country Flags', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif; }
   body { display: flex; flex-direction: column; background: #f4f5f7; color: var(--gray-900); }
 
   /* 로딩 화면 */
@@ -257,7 +276,9 @@
   }
   .popup-member.has-role { border-left-color: var(--gray-400); }
   .m-line1 { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
-  .m-flag { font-size: 16px; line-height: 1; }
+  .m-flag { display: inline-flex; align-items: center; line-height: 1; }
+  .m-flag img.flag-img { border-radius: 2px; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.1); }
+  .flag-img { vertical-align: middle; border-radius: 2px; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.1); }
   .m-name { font-weight: 700; color: var(--gray-900); font-size: 13px; }
   .role-tag {
     display: inline-block; padding: 1px 7px; border-radius: 4px;
@@ -670,8 +691,19 @@ const state = { view: 'region', selectedRegion: null, search: '', category: null
 
 function isoToFlag(iso) {
   if (!iso || iso.length !== 2) return '';
+  // ISO → emoji codepoints
   const codePoints = iso.toLowerCase().split('').map(c => 0x1F1E6 + c.charCodeAt(0) - 'a'.charCodeAt(0));
   return String.fromCodePoint(...codePoints);
+}
+
+// SVG 국기 이미지로 표시 (Twemoji CDN)
+function isoToFlagImg(iso, size) {
+  if (!iso || iso.length !== 2) return '';
+  const code = iso.toLowerCase();
+  // ISO 두 글자 → emoji codepoints (16진수)
+  const cp = code.split('').map(c => (0x1F1E6 + c.charCodeAt(0) - 'a'.charCodeAt(0)).toString(16)).join('-');
+  const sz = size || 16;
+  return `<img class="flag-img" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${cp}.svg" alt="${iso.toUpperCase()}" loading="lazy" style="width:${sz}px;height:auto;vertical-align:middle;display:inline-block">`;
 }
 
 const map = L.map('map', { worldCopyJump: true, minZoom: 2, maxZoom: 16 }).setView([20, 30], 2);
@@ -922,10 +954,10 @@ function buildChapterPopup(c) {
   if (c.president === '공석') { bg = '#94a3b8'; statusText = '지회장 공석'; }
   else if (!c.official) { bg = '#f59e0b'; statusText = '공식지회 외'; }
   else { statusText = `지회장: ${c.president}`; }
-  const chapterFlag = isoToFlag(c.iso);
+  const chapterFlag = c.iso ? isoToFlagImg(c.iso, 20) : '';
   let html = `<div class="popup-content">
     <div class="popup-header" style="background:${bg}">
-      <h3>${chapterFlag ? chapterFlag + ' ' : ''}${escapeHTML(c.city)}</h3>
+      <h3 style="display:flex;align-items:center;gap:8px">${chapterFlag}<span>${escapeHTML(c.city)}</span></h3>
       <div class="sub">${escapeHTML(c.country)} · ${escapeHTML(c.region)} · ${statusText}</div>
     </div>
     <div class="popup-body">
@@ -949,7 +981,7 @@ function buildChapterPopup(c) {
       const hasRole = tags.length > 0;
       html += `<div class="popup-member ${hasRole ? 'has-role' : ''}">`;
       html += `<div class="m-line1">`;
-      if (flag) html += `<span class="m-flag" title="${escapeHTML(c.country)}">${flag}</span>`;
+      if (c.iso) html += `<span class="m-flag" title="${escapeHTML(c.country)}">${isoToFlagImg(c.iso, 20)}</span>`;
       html += `<span class="m-name">${escapeHTML(m.name)}</span>`;
       tags.forEach(t => { html += `<span class="role-tag ${t.cls}">${escapeHTML(t.label)}</span>`; });
       html += `</div>`;
@@ -1045,9 +1077,9 @@ function renderList() {
       if (c.president && c.president !== '공석') badge = `<span class="badge badge-pres">${escapeHTML(c.president)}</span>`;
       else if (c.president === '공석') badge = `<span class="badge badge-vac">공석</span>`;
       const regionBadge = `<span class="badge badge-region" style="background:${RC[c.region]}">${escapeHTML(c.region)}</span>`;
-      const listFlag = isoToFlag(c.iso);
+      const listFlag = c.iso ? isoToFlagImg(c.iso, 16) : '';
       item.innerHTML = `
-        <div class="it-title"><span>${listFlag ? listFlag + ' ' : ''}${escapeHTML(c.city)}</span><span class="badge badge-mem">${cnt}명</span></div>
+        <div class="it-title"><span style="display:inline-flex;align-items:center;gap:6px">${listFlag}${escapeHTML(c.city)}</span><span class="badge badge-mem">${cnt}명</span></div>
         <div class="it-sub">${escapeHTML(c.country)}</div>
         <div class="it-meta">${regionBadge} ${badge}</div>`;
       item.onclick = () => {
