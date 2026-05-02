@@ -85,33 +85,70 @@
 
   
 
-  /* 세계 시계 (우측 세로) */
+  /* 세계 시계 (우측 세로, 토글 가능) */
   .world-clocks-vertical {
-    position: absolute; top: 50%; right: 12px;
-    transform: translateY(-50%);
-    display: flex; flex-direction: column; gap: 4px;
-    z-index: 998;
-    max-height: calc(100vh - 200px);
-    overflow-y: auto;
-    scrollbar-width: none;
-    padding: 4px;
-  }
-  .world-clocks-vertical::-webkit-scrollbar { display: none; }
-  .clock-item {
-    display: flex; flex-direction: column; align-items: center;
-    padding: 5px 8px; min-width: 64px;
-    background: rgba(255, 255, 255, 0.92);
+    position: absolute; bottom: 16px; right: 12px;
+    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(8px);
     border: 1px solid var(--gray-200);
-    border-radius: 6px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    z-index: 998;
+    overflow: hidden;
+    transition: all 0.2s;
+    max-width: 130px;
+  }
+  .clock-header {
+    padding: 8px 10px;
+    background: linear-gradient(135deg, #fef2f2, #fff);
+    border-bottom: 1px solid var(--gray-200);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--red);
+    user-select: none;
+  }
+  .clock-header-title { 
+    display: flex; align-items: center; gap: 4px;
+  }
+  .clock-arrow {
+    font-size: 10px;
+    transition: transform 0.2s;
+    opacity: 0.7;
+  }
+  .world-clocks-vertical.collapsed .clock-arrow {
+    transform: rotate(-90deg);
+  }
+  .world-clocks-vertical.collapsed .clock-body {
+    display: none;
+  }
+  .world-clocks-vertical.collapsed .clock-header {
+    border-bottom: none;
+  }
+  .clock-body {
+    display: flex; flex-direction: column; gap: 3px;
+    padding: 6px;
+    max-height: 380px;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .clock-body::-webkit-scrollbar { display: none; }
+  .clock-item {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 4px 6px;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 5px;
     cursor: pointer;
     transition: all 0.15s;
   }
   .clock-item:hover {
-    background: white;
-    transform: translateX(-2px);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    background: var(--gray-50);
+    transform: translateX(-1px);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     border-color: var(--red-light);
   }
   .clock-item.current {
@@ -131,11 +168,70 @@
     letter-spacing: -0.3px;
   }
   
-  /* 모바일에서는 시계 숨김 (공간 부족) */
+  /* 모바일에서도 표시, 사이즈만 컴팩트 */
   @media (max-width: 768px) {
-    .world-clocks-vertical { display: none; }
+    .world-clocks-vertical {
+      bottom: 80px; right: 8px;
+      max-width: 110px;
+    }
+    .clock-header { padding: 6px 8px; font-size: 10px; }
+    .clock-body { padding: 4px; gap: 2px; max-height: 280px; }
+    .clock-item { padding: 3px 5px; }
+    .clock-city { font-size: 8px; }
+    .clock-time { font-size: 11px; }
+    /* 모바일에서는 기본적으로 접힌 상태 */
+    .world-clocks-vertical:not(.expanded) .clock-body { display: none; }
+    .world-clocks-vertical:not(.expanded) .clock-header { border-bottom: none; }
+    .world-clocks-vertical:not(.expanded) .clock-arrow { transform: rotate(-90deg); }
   }
   
+  /* 사이드바 회원 검색 결과 */
+  .search-matches {
+    background: linear-gradient(135deg, #fef2f2, #fff);
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 12px;
+  }
+  .search-match-title {
+    font-size: 11px; font-weight: 700; color: var(--red);
+    margin-bottom: 6px;
+  }
+  .search-match-item {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .search-match-item:hover {
+    border-color: var(--red);
+    transform: translateX(2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+  }
+  .search-match-item:last-child { margin-bottom: 0; }
+  .sm-line1 {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 13px; font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .sm-name { color: var(--gray-900); }
+  .sm-line2 {
+    font-size: 10px; color: var(--gray-600);
+    margin-left: 22px;
+  }
+  .sm-tag {
+    font-size: 9px; padding: 1px 5px;
+    border-radius: 3px; color: white;
+    font-weight: 600; line-height: 1.4;
+  }
+  .sm-pres { background: #1e3a8a; }
+  .sm-pos { background: #2563eb; }
+  .sm-hon { background: #d97706; }
+  .sm-dir { background: #6366f1; }
+
   /* 로딩 화면 */
   .loading-overlay {
     position: fixed; inset: 0; z-index: 99999;
@@ -352,6 +448,18 @@
     border-radius: 6px; border-left: 3px solid var(--gray-200);
   }
   .popup-member.has-role { border-left-color: var(--gray-400); }
+  .popup-member.search-match {
+    border-color: var(--red) !important;
+    border-left-color: var(--red) !important;
+    background: linear-gradient(135deg, #fef2f2, #fff) !important;
+    box-shadow: 0 0 0 2px rgba(214, 40, 40, 0.2);
+    animation: searchHighlight 2s ease-out;
+  }
+  @keyframes searchHighlight {
+    0% { box-shadow: 0 0 0 8px rgba(214, 40, 40, 0.4); }
+    50% { box-shadow: 0 0 0 4px rgba(214, 40, 40, 0.3); }
+    100% { box-shadow: 0 0 0 2px rgba(214, 40, 40, 0.2); }
+  }
   .m-line1 { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
   .m-flag { display: inline-flex; align-items: center; line-height: 1; }
   .m-flag img.flag-img { border-radius: 2px; box-shadow: 0 0 0 0.5px rgba(0,0,0,0.1); }
@@ -634,45 +742,51 @@
     
     <!-- 세계 시계 (우측 세로) -->
     <div class="world-clocks-vertical" id="worldClocksVertical">
-      <div class="clock-item" data-tz="America/Los_Angeles" data-city="Los Angeles">
-        <div class="clock-city">LA</div>
-        <div class="clock-time">--:--</div>
+      <div class="clock-header" id="clockHeader">
+        <span class="clock-header-title">🕐 세계시간</span>
+        <span class="clock-arrow">▼</span>
       </div>
-      <div class="clock-item" data-tz="America/New_York" data-city="New York">
-        <div class="clock-city">NY</div>
-        <div class="clock-time">--:--</div>
-      </div>
-      <div class="clock-item" data-tz="America/Mexico_City" data-city="Mexico City">
-        <div class="clock-city">멕시코</div>
-        <div class="clock-time">--:--</div>
-      </div>
-      <div class="clock-item" data-tz="Europe/Berlin" data-city="Frankfurt">
-        <div class="clock-city">프랑크푸르트</div>
-        <div class="clock-time">--:--</div>
-      </div>
-      <div class="clock-item" data-tz="Asia/Dubai" data-city="Dubai">
-        <div class="clock-city">두바이</div>
-        <div class="clock-time">--:--</div>
-      </div>
-      <div class="clock-item" data-tz="Asia/Ho_Chi_Minh" data-city="Ho Chi Minh">
-        <div class="clock-city">호치민</div>
-        <div class="clock-time">--:--</div>
-      </div>
-      <div class="clock-item" data-tz="Asia/Shanghai" data-city="Guangzhou">
-        <div class="clock-city">광저우</div>
-        <div class="clock-time">--:--</div>
-      </div>
-      <div class="clock-item" data-tz="Asia/Tokyo" data-city="Tokyo">
-        <div class="clock-city">도쿄</div>
-        <div class="clock-time">--:--</div>
-      </div>
-      <div class="clock-item" data-tz="Asia/Seoul" data-city="Seoul">
-        <div class="clock-city">서울</div>
-        <div class="clock-time">--:--</div>
-      </div>
-      <div class="clock-item" data-tz="Australia/Sydney" data-city="Sydney">
-        <div class="clock-city">시드니</div>
-        <div class="clock-time">--:--</div>
+      <div class="clock-body">
+        <div class="clock-item" data-tz="America/Los_Angeles" data-city="Los Angeles">
+          <div class="clock-city">LA</div>
+          <div class="clock-time">--:--</div>
+        </div>
+        <div class="clock-item" data-tz="America/New_York" data-city="New York">
+          <div class="clock-city">NY</div>
+          <div class="clock-time">--:--</div>
+        </div>
+        <div class="clock-item" data-tz="America/Mexico_City" data-city="Mexico City">
+          <div class="clock-city">멕시코</div>
+          <div class="clock-time">--:--</div>
+        </div>
+        <div class="clock-item" data-tz="Europe/Berlin" data-city="Frankfurt">
+          <div class="clock-city">프랑크푸르트</div>
+          <div class="clock-time">--:--</div>
+        </div>
+        <div class="clock-item" data-tz="Asia/Dubai" data-city="Dubai">
+          <div class="clock-city">두바이</div>
+          <div class="clock-time">--:--</div>
+        </div>
+        <div class="clock-item" data-tz="Asia/Ho_Chi_Minh" data-city="Ho Chi Minh">
+          <div class="clock-city">호치민</div>
+          <div class="clock-time">--:--</div>
+        </div>
+        <div class="clock-item" data-tz="Asia/Shanghai" data-city="Guangzhou">
+          <div class="clock-city">광저우</div>
+          <div class="clock-time">--:--</div>
+        </div>
+        <div class="clock-item" data-tz="Asia/Tokyo" data-city="Tokyo">
+          <div class="clock-city">도쿄</div>
+          <div class="clock-time">--:--</div>
+        </div>
+        <div class="clock-item" data-tz="Asia/Seoul" data-city="Seoul">
+          <div class="clock-city">서울</div>
+          <div class="clock-time">--:--</div>
+        </div>
+        <div class="clock-item" data-tz="Australia/Sydney" data-city="Sydney">
+          <div class="clock-city">시드니</div>
+          <div class="clock-time">--:--</div>
+        </div>
       </div>
     </div>
   </div>
@@ -1472,7 +1586,8 @@ function buildChapterPopup(c) {
     sorted.forEach(m => {
       const tags = getRoleTags(m);
       const hasRole = tags.length > 0;
-      html += `<div class="popup-member ${hasRole ? 'has-role' : ''}">`;
+      const memberSafeName = (m.name || '').replace(/[^a-z0-9가-힣]/gi, '_');
+      html += `<div class="popup-member ${hasRole ? 'has-role' : ''}" data-name="${escapeHTML(m.name)}" data-search-key="${memberSafeName}">`;
       html += `<div class="m-line1">`;
       if (c.iso) html += `<span class="m-flag" title="${escapeHTML(c.country)}">${isoToFlagImg(c.iso, 20)}</span>`;
       html += `<span class="m-name">${escapeHTML(m.name)}</span>`;
@@ -1536,6 +1651,53 @@ function renderList() {
   const list = document.getElementById('resultsList');
   const header = document.getElementById('resultsHeader');
   list.innerHTML = '';
+  
+  // 회원 이름 매칭 시 빠른 이동 결과 추가
+  if (state.search && state.search.length >= 2) {
+    const matches = [];
+    const term = state.search.toLowerCase();
+    for (const ch of DATA.chapters) {
+      for (const m of ch.members) {
+        if (m.name && m.name.toLowerCase().includes(term)) {
+          matches.push({ chapter: ch, member: m });
+          if (matches.length >= 8) break;
+        }
+      }
+      if (matches.length >= 8) break;
+    }
+    
+    if (matches.length > 0) {
+      const matchBox = document.createElement('div');
+      matchBox.className = 'search-matches';
+      matchBox.innerHTML = `<div class="search-match-title">👤 회원 검색 결과 ${matches.length}명${matches.length >= 8 ? '+' : ''}</div>`;
+      
+      matches.forEach(({ chapter, member }) => {
+        const item = document.createElement('div');
+        item.className = 'search-match-item';
+        const flag = chapter.iso ? isoToFlagImg(chapter.iso, 14) : '';
+        const tags = [];
+        if (member.role === '지회장') tags.push('<span class="sm-tag sm-pres">지회장</span>');
+        if (member.position) tags.push(`<span class="sm-tag sm-pos">${escapeHTML(member.position.split(' / ')[0])}</span>`);
+        if (member.honorary) tags.push(`<span class="sm-tag sm-hon">명예회장</span>`);
+        if (member.isDirector && !member.position && !member.honorary && member.role !== '지회장') {
+          tags.push('<span class="sm-tag sm-dir">상임이사</span>');
+        }
+        
+        item.innerHTML = `
+          <div class="sm-line1">
+            ${flag}
+            <span class="sm-name">${escapeHTML(member.name)}</span>
+            ${tags.join('')}
+          </div>
+          <div class="sm-line2">${escapeHTML(tCity(chapter.city))} · ${escapeHTML(tCountry(chapter.country))} ${member.company ? '· ' + escapeHTML(member.company) : ''}</div>
+        `;
+        item.onclick = () => jumpToMember(chapter, member.name);
+        matchBox.appendChild(item);
+      });
+      
+      list.appendChild(matchBox);
+    }
+  }
   if (state.view === 'region' && !state.selectedRegion) {
     const displayRegions = DATA.displayRegions || DATA.regions;
     header.textContent = `${displayRegions.length}${t('regions_count')}`;
@@ -1643,6 +1805,7 @@ document.getElementById('searchInput').addEventListener('input', e => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
     state.search = e.target.value.trim();
+    state.searchMatchMember = null;  // 매칭된 회원 초기화
     if (state.search && state.view === 'region') {
       state.view = 'chapter';
       document.querySelectorAll('.view-toggle button').forEach(b => b.classList.toggle('active', b.dataset.view === 'chapter'));
@@ -1650,6 +1813,61 @@ document.getElementById('searchInput').addEventListener('input', e => {
     render();
   }, 200);
 });
+
+// 검색어가 회원 이름과 정확히 매칭되면 해당 회원 강조
+function findMemberByName(searchTerm) {
+  if (!searchTerm) return null;
+  const term = searchTerm.toLowerCase().trim();
+  for (const ch of DATA.chapters) {
+    for (const m of ch.members) {
+      if (m.name && m.name.toLowerCase() === term) {
+        return { chapter: ch, member: m };
+      }
+      if (m.name && m.name.toLowerCase().includes(term) && term.length >= 2) {
+        return { chapter: ch, member: m };
+      }
+    }
+  }
+  return null;
+}
+
+// 사이드바에서 회원 이름 클릭 시 해당 지회 팝업 열고 스크롤
+function jumpToMember(chapter, memberName) {
+  state.view = 'chapter';
+  document.querySelectorAll('.view-toggle button').forEach(b => b.classList.toggle('active', b.dataset.view === 'chapter'));
+  
+  map.setView([chapter.lat, chapter.lng], 7, { animate: true });
+  
+  // 마커 팝업 열기 + 스크롤
+  setTimeout(() => {
+    markerLayer.eachLayer(m => {
+      const ll = m.getLatLng();
+      if (Math.abs(ll.lat - chapter.lat) < 0.001 && Math.abs(ll.lng - chapter.lng) < 0.001) {
+        m.openPopup();
+        // 팝업 열린 후 회원 카드로 스크롤
+        setTimeout(() => scrollToMemberCard(memberName), 200);
+      }
+    });
+    closeSidebarOnMobile();
+  }, 500);
+}
+
+function scrollToMemberCard(memberName) {
+  if (!memberName) return;
+  // 모든 popup-member 중 이 이름의 것 찾기
+  const cards = document.querySelectorAll('.popup-member');
+  for (const card of cards) {
+    if (card.dataset.name === memberName) {
+      // 이전 강조 제거
+      cards.forEach(c => c.classList.remove('search-match'));
+      // 새로 강조
+      card.classList.add('search-match');
+      // 스크롤 (부드럽게)
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      break;
+    }
+  }
+}
 
 // 검색창에서 엔터 누르면 모바일에서 사이드바 닫기
 document.getElementById('searchInput').addEventListener('keydown', e => {
@@ -1785,6 +2003,21 @@ function updateWorldClocks() {
       if (timeEl) timeEl.textContent = time;
     } catch(e) {
       console.warn('Clock TZ error:', tz, e);
+    }
+  });
+}
+
+// 시계 헤더 클릭 시 토글 (legend와 동일)
+const clockHeader = document.getElementById('clockHeader');
+const clockWidget = document.getElementById('worldClocksVertical');
+if (clockHeader && clockWidget) {
+  clockHeader.addEventListener('click', () => {
+    if (window.matchMedia('(max-width: 768px)').matches) {
+      // 모바일: expanded 클래스 토글
+      clockWidget.classList.toggle('expanded');
+    } else {
+      // 데스크톱: collapsed 클래스 토글
+      clockWidget.classList.toggle('collapsed');
     }
   });
 }
