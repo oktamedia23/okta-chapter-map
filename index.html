@@ -131,11 +131,15 @@
   .clock-body {
     display: flex; flex-direction: column; gap: 3px;
     padding: 6px;
-    max-height: 380px;
+    max-height: min(420px, calc(100vh - 220px));
     overflow-y: auto;
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gray-300) transparent;
   }
-  .clock-body::-webkit-scrollbar { display: none; }
+  .clock-body::-webkit-scrollbar { width: 4px; }
+  .clock-body::-webkit-scrollbar-track { background: transparent; }
+  .clock-body::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 2px; }
+  .clock-body::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
   .clock-item {
     display: flex; flex-direction: column; align-items: center;
     padding: 4px 6px;
@@ -152,8 +156,10 @@
     border-color: var(--red-light);
   }
   .clock-item.current {
+    position: sticky; top: 0; z-index: 2;
     background: linear-gradient(135deg, #fef2f2, #fff);
     border-color: var(--red);
+    box-shadow: 0 2px 4px rgba(214, 40, 40, 0.15);
   }
   .clock-item.current .clock-time { color: var(--red); }
   .clock-item.current .clock-city { color: var(--red); font-weight: 700; }
@@ -175,7 +181,7 @@
       max-width: 110px;
     }
     .clock-header { padding: 6px 8px; font-size: 10px; }
-    .clock-body { padding: 4px; gap: 2px; max-height: 280px; }
+    .clock-body { padding: 4px; gap: 2px; max-height: min(320px, calc(100vh - 280px)); }
     .clock-item { padding: 3px 5px; }
     .clock-city { font-size: 8px; }
     .clock-time { font-size: 11px; }
@@ -1977,7 +1983,7 @@ const USER_TIMEZONE = (() => {
   }
 })();
 
-// 시계 위젯에서 사용자 시간대와 같은 시계를 강조
+// 시계 위젯에서 사용자 시간대와 같은 시계를 강조 + 맨 위로 이동
 function highlightUserClock() {
   document.querySelectorAll('.clock-item').forEach(c => {
     c.classList.remove('current');
@@ -1990,13 +1996,12 @@ function highlightUserClock() {
   if (!matched) {
     try {
       const now = new Date();
-      const userOffset = -now.getTimezoneOffset();  // 분 단위
+      const userOffset = -now.getTimezoneOffset();
       
       const clocks = document.querySelectorAll('.clock-item');
       for (const c of clocks) {
         const tz = c.dataset.tz;
         try {
-          // 해당 timezone의 오프셋 계산
           const fmt = new Intl.DateTimeFormat('en-US', { 
             timeZone: tz, timeZoneName: 'longOffset' 
           });
@@ -2019,10 +2024,21 @@ function highlightUserClock() {
   
   if (matched) {
     matched.classList.add('current');
+    // 현재 시계를 맨 위로 이동
+    const parent = matched.parentNode;
+    if (parent && parent.firstChild !== matched) {
+      parent.insertBefore(matched, parent.firstChild);
+    }
   } else {
     // fallback: 서울
     const seoul = document.querySelector('.clock-item[data-tz="Asia/Seoul"]');
-    if (seoul) seoul.classList.add('current');
+    if (seoul) {
+      seoul.classList.add('current');
+      const parent = seoul.parentNode;
+      if (parent && parent.firstChild !== seoul) {
+        parent.insertBefore(seoul, parent.firstChild);
+      }
+    }
   }
 }
 
