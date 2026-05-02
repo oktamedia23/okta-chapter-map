@@ -139,7 +139,7 @@
   .stat-pill .lbl { font-size: 9px; color: var(--gray-500); margin-top: 1px; white-space: nowrap; }
 
   .view-toggle {
-    position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+    position: absolute; top: 16px; left: 16px;
     z-index: 999; background: white; padding: 4px;
     border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,.12);
     display: flex; gap: 2px;
@@ -153,7 +153,7 @@
   .view-toggle button:hover:not(.active) { background: var(--gray-100); }
 
   .breadcrumb {
-    position: absolute; top: 70px; left: 16px; z-index: 998;
+    position: absolute; top: 64px; left: 16px; z-index: 998;
     background: white; padding: 8px 14px; border-radius: 6px;
     box-shadow: 0 2px 8px rgba(0,0,0,.12); display: none;
     align-items: center; gap: 8px; font-size: 12px;
@@ -344,58 +344,51 @@
   .legend-item:hover { color: var(--red); }
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
+  .lang-switcher {
+    display: flex; gap: 4px; margin-right: 10px;
+  }
+  .lang-pill {
+    min-width: 26px; height: 24px; padding: 0 7px;
+    border: 1.5px solid var(--gray-200); background: white;
+    border-radius: 5px; cursor: pointer;
+    font-size: 11px; font-weight: 700;
+    color: var(--gray-500);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans CJK KR', 'Malgun Gothic', sans-serif;
+    line-height: 1;
+  }
+  .lang-pill:hover {
+    background: var(--gray-50);
+    color: var(--gray-800);
+    border-color: var(--gray-300);
+    transform: translateY(-1px);
+  }
+  .lang-pill.active {
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+  /* 언어별 active 색상 (각 국가 대표 색상) */
+  .lang-pill.active[data-lang="ko"] { background: #003478; }  /* 한국 - 진파랑 */
+  .lang-pill.active[data-lang="en"] { background: #1f2937; }  /* 영어 - 검정/네이비 */
+  .lang-pill.active[data-lang="zh"] { background: #de2910; }  /* 중국 - 빨강 */
+  .lang-pill.active[data-lang="ja"] { background: #bc002d; }  /* 일본 - 빨강 */
+  
   @media (max-width: 768px) {
     aside { position: absolute; left: -100%; top: 0; bottom: 0; z-index: 998;
             box-shadow: 4px 0 16px rgba(0,0,0,.15); transition: left 0.25s; }
     aside.open { left: 0; }
     .header-stats .stat-pill:nth-child(n+3) { display: none; }
-    .lang-switcher {
-    display: flex; gap: 4px; margin-right: 10px;
-  }
-  .lang-pill {
-    width: 32px; height: 32px; border-radius: 50%;
-    border: 2px solid var(--gray-200); background: white;
-    cursor: pointer; padding: 0; overflow: hidden;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-    position: relative;
-  }
-  .lang-pill:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.12);
-  }
-  .lang-pill .lang-flag-img {
-    width: 22px; height: 22px; border-radius: 50%;
-    object-fit: cover; opacity: 0.55;
-    transition: opacity 0.2s;
-  }
-  .lang-pill:hover .lang-flag-img { opacity: 0.85; }
-  
-  /* 언어별 active 색상 */
-  .lang-pill.active {
-    transform: scale(1.05);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  }
-  .lang-pill.active .lang-flag-img { opacity: 1; }
-  
-  .lang-pill.ko.active { border-color: #003478; background: #003478; }   /* 한국 - 파랑 */
-  .lang-pill.en.active { border-color: #b22234; background: #b22234; }   /* 미국 - 빨강 */
-  .lang-pill.zh.active { border-color: #de2910; background: #de2910; }   /* 중국 - 빨강 */
-  .lang-pill.ja.active { border-color: #bc002d; background: #bc002d; }   /* 일본 - 빨강 */
-  
-  @media (max-width: 768px) {
-    .lang-switcher { gap: 3px; margin-right: 6px; }
-    .lang-pill { width: 26px; height: 26px; border-width: 1.5px; }
-    .lang-pill .lang-flag-img { width: 18px; height: 18px; }
-  }
-  
-  .menu-btn { display: block !important; }
+    .menu-btn { display: block !important; }
     .legend { left: 12px; bottom: 12px; max-width: 180px; font-size: 10px; }
     .legend-body { max-height: 50vh; }
     .title-block h1 { font-size: 13px; }
-    .refresh-btn { padding: 4px 8px; font-size: 10px; }
+    .lang-switcher { gap: 2px; margin-right: 4px; }
+    .lang-pill { min-width: 22px; height: 20px; padding: 0 5px; font-size: 10px; border-radius: 4px; }
   }
+  
   .menu-btn {
     display: none; background: none; border: none; padding: 6px 10px;
     cursor: pointer; font-size: 18px; color: var(--gray-700);
@@ -426,18 +419,10 @@
     </div>
   </div>
   <div class="lang-switcher">
-    <button class="lang-pill ko" data-lang="ko" onclick="setLang('ko')" title="한국어">
-      <img class="lang-flag-img" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1f0-1f1f7.svg" alt="KR">
-    </button>
-    <button class="lang-pill en" data-lang="en" onclick="setLang('en')" title="English">
-      <img class="lang-flag-img" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1fa-1f1f8.svg" alt="EN">
-    </button>
-    <button class="lang-pill zh" data-lang="zh" onclick="setLang('zh')" title="中文">
-      <img class="lang-flag-img" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1e8-1f1f3.svg" alt="ZH">
-    </button>
-    <button class="lang-pill ja" data-lang="ja" onclick="setLang('ja')" title="日本語">
-      <img class="lang-flag-img" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ef-1f1f5.svg" alt="JA">
-    </button>
+    <button class="lang-pill" data-lang="ko" onclick="setLang('ko')" title="한국어">한</button>
+    <button class="lang-pill" data-lang="en" onclick="setLang('en')" title="English">ENG</button>
+    <button class="lang-pill" data-lang="zh" onclick="setLang('zh')" title="中文">中</button>
+    <button class="lang-pill" data-lang="ja" onclick="setLang('ja')" title="日本語">日</button>
   </div>
   <div class="header-stats">
     <div class="stat-pill"><span class="num" id="statMembers">-</span><span class="lbl">DB등록회원</span></div>
@@ -791,7 +776,7 @@ function setLang(lang) {
   document.documentElement.lang = lang;
   applyI18nToStaticUI();
   
-  // 언어 버튼 active 상태 업데이트
+  // 언어 버튼 active 상태 업데이트 (lang-pill)
   document.querySelectorAll('.lang-pill').forEach(b => 
     b.classList.toggle('active', b.dataset.lang === lang));
   
@@ -800,13 +785,14 @@ function setLang(lang) {
 }
 
 function applyI18nToStaticUI() {
-  // 정적 UI 요소 다국어 적용
-  const titleEl = document.querySelector('.title-block h1');
-  if (titleEl) {
-    const ver = titleEl.querySelector('.ver-tag');
-    titleEl.innerHTML = t('title') + ' ';
-    if (ver) titleEl.appendChild(ver);
-  }
+  try {
+    // 정적 UI 요소 다국어 적용
+    const titleEl = document.querySelector('.title-block h1');
+    if (titleEl) {
+      const ver = titleEl.querySelector('.ver-tag');
+      titleEl.innerHTML = t('title') + ' ';
+      if (ver) titleEl.appendChild(ver);
+    }
   
   // 통계 라벨
   const setLabel = (sel, key) => {
@@ -837,9 +823,12 @@ function applyI18nToStaticUI() {
     else if (btn.dataset.view === 'chapter') btn.textContent = t('view_chapter');
   });
   
-  // 범례 타이틀
-  const legendTitle = document.querySelector('.legend-title');
-  if (legendTitle) legendTitle.textContent = t('legend_title');
+    // 범례 타이틀
+    const legendTitle = document.querySelector('.legend-title');
+    if (legendTitle) legendTitle.textContent = t('legend_title');
+  } catch(e) {
+    console.warn('[OKTA] i18n apply error (non-fatal):', e);
+  }
 }
 const RC = DATA.regionColors;
 const state = { view: 'region', selectedRegion: null, search: '', category: null, status: null };
@@ -1386,33 +1375,26 @@ if (window.matchMedia('(max-width: 768px)').matches) {
     DATA = await loadDataFromSheet();
     buildFilters();
     render();
-    document.getElementById('lastUpdate').textContent = t('subtitle');
-    setLang(currentLang);  // 저장된 언어 또는 기본값 적용
+    
+    // 다국어 적용 (실패해도 페이지는 동작)
+    try {
+      const lastUpdateEl = document.getElementById('lastUpdate');
+      if (lastUpdateEl) lastUpdateEl.textContent = t('subtitle');
+      setLang(currentLang);
+    } catch(e) {
+      console.warn('[OKTA] i18n init warning:', e);
+    }
+    
     document.getElementById('loadingOverlay').classList.add('hidden');
     setTimeout(() => document.getElementById('loadingOverlay').remove(), 500);
   } catch (e) {
+    console.error('[OKTA] Init error:', e);
     document.getElementById('loadingOverlay').innerHTML = `
-      <div class="error-box" style="max-width:600px;text-align:left">
-        <h3 style="margin-bottom:12px;text-align:center">⚠ 데이터 로드 실패</h3>
-        <p style="font-size:13px;margin-bottom:16px;color:#c33;text-align:center;font-weight:600">${escapeHTML(e.message).replace(/\n/g, '<br>')}</p>
-        
-        <div style="background:#fffbf0;border:1px solid #fbbf24;padding:12px;border-radius:6px;font-size:12px;color:#92400e;margin-bottom:12px">
-          <strong>📋 Apps Script 설정 방법:</strong>
-          <ol style="margin:8px 0 0 20px;line-height:1.8">
-            <li>Google Sheets 열기</li>
-            <li>메뉴: <strong>확장 프로그램 → Apps Script</strong></li>
-            <li>제공된 <strong>옥타_GAS_스크립트.gs</strong> 내용 전체 복사 → 붙여넣기</li>
-            <li>저장 (Ctrl+S)</li>
-            <li>우상단 <strong>[배포] → [새 배포]</strong></li>
-            <li>유형: <strong>웹 앱</strong>, 액세스: <strong>모든 사용자</strong></li>
-            <li>받은 URL을 HTML 파일의 <code>GAS_URL</code>에 입력</li>
-          </ol>
-        </div>
-        
-        <div style="display:flex;gap:8px;justify-content:center">
-          <button onclick="location.reload()" style="padding:8px 16px;background:#d62828;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600">다시 시도</button>
-          <button onclick="(function(){const u=prompt('Apps Script URL 입력:','');if(u){location.href=location.pathname+'?gas='+encodeURIComponent(u);}})()" style="padding:8px 16px;background:#2563eb;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600">URL 직접 입력</button>
-        </div>
+      <div class="error-box" style="max-width:500px;text-align:center">
+        <h3 style="margin-bottom:12px">⚠ 페이지 로드 오류</h3>
+        <p style="font-size:13px;margin-bottom:16px;color:#c33;font-weight:600">${escapeHTML(e.message)}</p>
+        <p style="font-size:11px;color:#888;margin-bottom:12px">F12 → Console에서 자세한 에러를 확인할 수 있습니다.</p>
+        <button onclick="location.reload()" style="padding:8px 16px;background:#d62828;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600">다시 시도</button>
       </div>`;
   }
 })();
