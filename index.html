@@ -287,6 +287,7 @@
   }
   .role-pres { background: var(--role-pres); }
   .role-board { background: var(--role-board); }
+  .role-director { background: #6366f1; }  /* 상임이사: 인디고 */
   .role-exec { background: var(--role-exec); }
   .role-honor { background: var(--role-honor); }
   .role-trade { background: var(--role-trade); }
@@ -349,20 +350,44 @@
     aside.open { left: 0; }
     .header-stats .stat-pill:nth-child(n+3) { display: none; }
     .lang-switcher {
-    display: flex; gap: 4px; margin-right: 12px; align-items: center;
+    display: flex; gap: 4px; margin-right: 10px;
   }
-  .lang-btn {
-    padding: 4px 10px; font-size: 11px; font-weight: 600;
-    border: 1px solid var(--gray-200); background: white;
-    color: var(--gray-700); border-radius: 6px; cursor: pointer;
-    transition: all 0.15s; white-space: nowrap;
+  .lang-pill {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 2px solid var(--gray-200); background: white;
+    cursor: pointer; padding: 0; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    position: relative;
   }
-  .lang-btn:hover { background: var(--gray-50); }
-  .lang-btn.active { background: var(--red); color: white; border-color: var(--red); }
+  .lang-pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+  }
+  .lang-pill .lang-flag-img {
+    width: 22px; height: 22px; border-radius: 50%;
+    object-fit: cover; opacity: 0.55;
+    transition: opacity 0.2s;
+  }
+  .lang-pill:hover .lang-flag-img { opacity: 0.85; }
+  
+  /* 언어별 active 색상 */
+  .lang-pill.active {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .lang-pill.active .lang-flag-img { opacity: 1; }
+  
+  .lang-pill.ko.active { border-color: #003478; background: #003478; }   /* 한국 - 파랑 */
+  .lang-pill.en.active { border-color: #b22234; background: #b22234; }   /* 미국 - 빨강 */
+  .lang-pill.zh.active { border-color: #de2910; background: #de2910; }   /* 중국 - 빨강 */
+  .lang-pill.ja.active { border-color: #bc002d; background: #bc002d; }   /* 일본 - 빨강 */
   
   @media (max-width: 768px) {
-    .lang-switcher { gap: 2px; margin-right: 6px; }
-    .lang-btn { padding: 3px 6px; font-size: 9px; }
+    .lang-switcher { gap: 3px; margin-right: 6px; }
+    .lang-pill { width: 26px; height: 26px; border-width: 1.5px; }
+    .lang-pill .lang-flag-img { width: 18px; height: 18px; }
   }
   
   .menu-btn { display: block !important; }
@@ -401,10 +426,18 @@
     </div>
   </div>
   <div class="lang-switcher">
-    <button class="lang-btn" data-lang="ko" onclick="setLang('ko')">한국어</button>
-    <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
-    <button class="lang-btn" data-lang="zh" onclick="setLang('zh')">中文</button>
-    <button class="lang-btn" data-lang="ja" onclick="setLang('ja')">日本語</button>
+    <button class="lang-pill ko" data-lang="ko" onclick="setLang('ko')" title="한국어">
+      <img class="lang-flag-img" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1f0-1f1f7.svg" alt="KR">
+    </button>
+    <button class="lang-pill en" data-lang="en" onclick="setLang('en')" title="English">
+      <img class="lang-flag-img" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1fa-1f1f8.svg" alt="EN">
+    </button>
+    <button class="lang-pill zh" data-lang="zh" onclick="setLang('zh')" title="中文">
+      <img class="lang-flag-img" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1e8-1f1f3.svg" alt="ZH">
+    </button>
+    <button class="lang-pill ja" data-lang="ja" onclick="setLang('ja')" title="日本語">
+      <img class="lang-flag-img" src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f1ef-1f1f5.svg" alt="JA">
+    </button>
   </div>
   <div class="header-stats">
     <div class="stat-pill"><span class="num" id="statMembers">-</span><span class="lbl">DB등록회원</span></div>
@@ -757,9 +790,11 @@ function setLang(lang) {
   localStorage.setItem('okta_lang', lang);
   document.documentElement.lang = lang;
   applyI18nToStaticUI();
+  
   // 언어 버튼 active 상태 업데이트
-  document.querySelectorAll('.lang-btn').forEach(b => 
+  document.querySelectorAll('.lang-pill').forEach(b => 
     b.classList.toggle('active', b.dataset.lang === lang));
+  
   // 다시 렌더
   if (typeof render === 'function') render();
 }
@@ -847,17 +882,30 @@ function getRoleTags(member) {
       else tags.push({label: p, cls: 'role-special'});
     });
   }
+  // 상임이사: 다른 직책이 없을 때만 단독 표시 (직책자는 이미 상임이사임)
+  if (member.isDirector && !member.position && !member.honorary && member.role !== '지회장') {
+    tags.push({label: '상임이사', cls: 'role-director'});
+  }
   return tags;
 }
 
 function sortMembers(members) {
+  // 정렬 우선순위:
+  // 0순위: 지회장
+  // 1순위: 직책자 (이사장단/상임집행부/감사/통상위원장/특별위원장/명예회장)
+  // 2순위: 상임이사 (직책 없이 상임이사 자격만 있는 회원)
+  // 3순위: 일반 회원
+  // 같은 그룹 내에서는 가나다순
+  function getPriority(m) {
+    if (m.role === '지회장') return 0;
+    if (m.position || m.honorary) return 1;  // 직책자
+    if (m.isDirector) return 2;  // 상임이사 (직책 없음)
+    return 3;  // 일반 회원
+  }
   return [...members].sort((a, b) => {
-    const aP = a.role === '지회장' ? 0 : 1;
-    const bP = b.role === '지회장' ? 0 : 1;
-    if (aP !== bP) return aP - bP;
-    const aR = (a.position || a.honorary || a.isDirector) ? 0 : 1;
-    const bR = (b.position || b.honorary || b.isDirector) ? 0 : 1;
-    if (aR !== bR) return aR - bR;
+    const pa = getPriority(a);
+    const pb = getPriority(b);
+    if (pa !== pb) return pa - pb;
     return a.name.localeCompare(b.name, 'ko');
   });
 }
@@ -1297,13 +1345,17 @@ document.getElementById('menuBtn').onclick = () =>
 
 // 사이드바 외부 클릭 시 닫기 (모바일)
 document.addEventListener('click', (e) => {
-  if (!isMobile()) return;
-  const sidebar = document.getElementById('sidebar');
-  const menuBtn = document.getElementById('menuBtn');
-  if (!sidebar.classList.contains('open')) return;
-  // 사이드바 자체나 메뉴버튼 클릭이면 무시
-  if (sidebar.contains(e.target) || menuBtn.contains(e.target)) return;
-  sidebar.classList.remove('open');
+  // 모바일 사이드바 외부 클릭 시 닫기
+  if (isMobile()) {
+    const sidebar = document.getElementById('sidebar');
+    const menuBtn = document.getElementById('menuBtn');
+    if (sidebar.classList.contains('open')) {
+      if (!sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
+        sidebar.classList.remove('open');
+      }
+    }
+  }
+  
 });
 
 map.on('zoomend', () => {
