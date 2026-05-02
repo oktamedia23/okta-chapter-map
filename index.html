@@ -110,6 +110,9 @@
     box-shadow: 0 2px 8px rgba(0,0,0,.08); z-index: 1000;
     border-bottom: 3px solid var(--red); flex-shrink: 0;
   }
+  .header-logo {
+    height: 32px; width: auto; display: block; flex-shrink: 0;
+  }
   .title-block h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
   .title-block .sub-line { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 3px; font-size: 11px; align-items: center; }
   .sub { color: var(--gray-500); }
@@ -390,6 +393,7 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       display: block;
     }
+    .header-logo { height: 24px; }
     .title-block .ver-tag { display: none; }
     .title-block .sub-line { display: none; }  /* 부제 숨김 */
     
@@ -416,9 +420,18 @@
     .legend { left: 12px; bottom: 12px; max-width: 180px; font-size: 10px; }
     .legend-body { max-height: 50vh; }
     
-    /* 뷰 토글 모바일 */
-    .view-toggle { top: 50px; left: 8px; padding: 3px; }
+    /* 뷰 토글 모바일 - 지도 영역 우상단 (사이드바 안 겹치게) */
+    .view-toggle { 
+      top: 8px; right: 8px; left: auto;
+      padding: 3px;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
     .view-toggle button { padding: 5px 10px; font-size: 11px; }
+    
+    /* 사이드바 열렸을 때 view-toggle 가리기 */
+    aside.open ~ #map .view-toggle { display: none; }
     
     /* 줌 컨트롤 모바일 사이즈 */
     .leaflet-control-zoom { 
@@ -430,11 +443,13 @@
       width: 32px !important; height: 32px !important; line-height: 32px !important;
     }
     
-    /* 브레드크럼 - view-toggle 아래 */
+    /* 브레드크럼 - 좌상단 (사이드바 닫혔을 때만) */
     .breadcrumb { 
-      top: 95px; left: 8px; padding: 5px 10px; font-size: 11px;
+      top: 8px; left: 8px; padding: 5px 10px; font-size: 11px;
       background: rgba(255,255,255,0.95);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
     }
+    aside.open ~ #map .breadcrumb { display: none; }
   }
   
   .menu-btn { display: block !important; padding: 4px 6px; font-size: 16px; }
@@ -483,6 +498,7 @@
 <header>
   <div style="display:flex;align-items:center;gap:12px;">
     <button class="menu-btn" id="menuBtn">☰</button>
+    <img src="data:image/png;base64,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" alt="OKTA" class="header-logo">
     <div class="title-block">
       <h1>OKTA DB등록 기준 지회지도 <span class="ver-tag">BETA</span></h1>
       <div class="sub-line">
