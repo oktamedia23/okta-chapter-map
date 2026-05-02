@@ -398,7 +398,7 @@
     .title-block .sub-line { display: none; }  /* 부제 숨김 */
     
     /* 사이드바 */
-    aside { position: absolute; left: -100%; top: 0; bottom: 0; z-index: 998;
+    aside { position: absolute; left: -100%; top: 0; bottom: 0; z-index: 1100;
             box-shadow: 4px 0 16px rgba(0,0,0,.15); transition: left 0.25s; }
     aside.open { left: 0; }
     
@@ -430,8 +430,9 @@
     }
     .view-toggle button { padding: 5px 10px; font-size: 11px; }
     
-    /* 사이드바 열렸을 때 view-toggle 가리기 */
-    aside.open ~ #map .view-toggle { display: none; }
+    /* 사이드바 열렸을 때 view-toggle/브레드크럼 가리기 */
+    body.sidebar-open .view-toggle,
+    body.sidebar-open .breadcrumb { display: none !important; }
     
     /* 줌 컨트롤 모바일 사이즈 */
     .leaflet-control-zoom { 
@@ -449,7 +450,6 @@
       background: rgba(255,255,255,0.95);
       box-shadow: 0 2px 8px rgba(0,0,0,0.12);
     }
-    aside.open ~ #map .breadcrumb { display: none; }
   }
   
   .menu-btn { display: block !important; padding: 4px 6px; font-size: 16px; }
@@ -1430,11 +1430,17 @@ document.getElementById('searchInput').addEventListener('keydown', e => {
 // 모바일 사이드바 토글 + 자동 닫기 헬퍼
 const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
 const closeSidebarOnMobile = () => {
-  if (isMobile()) document.getElementById('sidebar').classList.remove('open');
+  if (isMobile()) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.body.classList.remove('sidebar-open');
+  }
 };
 
-document.getElementById('menuBtn').onclick = () => 
-  document.getElementById('sidebar').classList.toggle('open');
+document.getElementById('menuBtn').onclick = () => {
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('open');
+  document.body.classList.toggle('sidebar-open', sb.classList.contains('open'));
+};
 
 // 사이드바 외부 클릭 시 닫기 (모바일)
 document.addEventListener('click', (e) => {
@@ -1445,6 +1451,7 @@ document.addEventListener('click', (e) => {
     if (sidebar.classList.contains('open')) {
       if (!sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
         sidebar.classList.remove('open');
+        document.body.classList.remove('sidebar-open');
       }
     }
   }
